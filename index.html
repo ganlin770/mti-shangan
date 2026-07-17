@@ -224,6 +224,44 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-fb-main{font-family:"Noto Serif SC",serif;font-weight:700;font-size:13.5px}
 .ai-fb-stat{margin-left:auto;font-size:11px;color:var(--mut);white-space:nowrap;padding-left:12px}
 .ai-mark .suggest{box-shadow:0 0 0 2.5px rgba(46,74,56,.32);transform:scale(1.05)}
+
+/* ==== 今日学习 ==== */
+.td-wrap{display:flex;flex-direction:column;gap:14px;max-width:860px}
+.td-head{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.td-ring{position:relative;width:64px;height:64px;flex:none}
+.td-ring svg{width:64px;height:64px;transform:rotate(-90deg)}
+.td-ring circle{fill:none;stroke:var(--paper);stroke-width:5}
+.td-ring circle+circle{stroke:var(--green);stroke-linecap:round}
+.td-ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"Noto Serif SC",serif;font-weight:700;font-size:14px}
+.td-hb b{font-family:"Noto Serif SC",serif;font-size:17px;display:block}
+.td-hb small{color:var(--mut);font-size:12px}
+.td-fc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.td-fcbars{display:flex;gap:10px;align-items:flex-end;margin-top:12px}
+.td-fcb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:flex-end}
+.td-fcb i{display:block;width:100%;max-width:34px;background:var(--green);opacity:.72;border-radius:5px 5px 0 0}
+.td-fcb small{font-size:10px;color:var(--mut)}
+.td-fcb em{font-style:normal;font-size:11px;font-weight:700;color:var(--green2)}
+.td-list{display:flex;flex-direction:column;gap:8px}
+.td-task{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 16px}
+.td-task.ok{opacity:.62;background:var(--paper)}
+.td-check{width:26px;height:26px;border-radius:50%;border:1.6px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none;color:#fff;font-size:13px}
+.td-task.ok .td-check{background:var(--green);border-color:var(--green)}
+.td-tb{flex:1;min-width:0}
+.td-tb b{font-size:14px;display:block}
+.td-tb small{color:var(--mut);font-size:11.5px;display:block;margin-top:2px;line-height:1.6}
+.td-prog{font-family:"Noto Serif SC",serif;font-weight:700;font-size:14px;color:var(--green2);flex:none}
+.td-go{border:0;background:var(--green);color:#f3efe6;border-radius:9px;padding:8px 15px;font-family:inherit;font-size:12.5px;cursor:pointer;flex:none;white-space:nowrap;transition:.15s}
+.td-go:hover{transform:translateY(-1px)}
+.td-cklabel{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--mut);cursor:pointer;flex:none}
+.td-tb textarea{width:100%;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:8px 11px;font-family:inherit;font-size:13px;margin-top:7px;resize:vertical;color:var(--ink)}
+.td-tb textarea:focus{outline:none;border-color:var(--green)}
+.td-tech{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.td-tech b{display:block;font-family:"Noto Serif SC",serif;margin:7px 0 4px}
+.td-tech small{color:var(--mut);font-size:12.5px;line-height:1.8;white-space:pre-wrap}
+.td-sumbox{display:flex;flex-direction:column;gap:10px}
+.td-sumbox .ai-send{align-self:flex-start}
+@media(max-width:760px){.td-task{flex-wrap:wrap}.td-go{margin-left:38px}}
+
 @media(max-width:760px){.ai-setup-grid{grid-template-columns:1fr 1fr}.ai-wrap{max-width:none}}
 
 </style>
@@ -553,7 +591,7 @@ function aiTaskHtml(){
   var pills='<button class="ai-pick'+(aiCiSrc==='ci'?' on':'')+'" data-cisrc="ci">357 词条</button>'
    +'<button class="ai-pick'+(aiCiSrc==='vocab'?' on':'')+'" data-cisrc="vocab">211 词汇</button>';
   if(aiCiSrc==='vocab'){
-   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">词汇陪练 · 2708 词随机抽</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
+   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">'+(tdSession&&tdSession.task==='vocab'&&st.daily&&st.daily.vQueue.length?'今日词汇 第 '+(st.daily.vDone+1)+'/10 词 · 答错自动排队尾':'词汇陪练 · 2708 词随机抽')+'</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
     +'<div class="ai-q">请给出中文释义：<b>'+esc(aiVItem[0])+'</b></div>'
     +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下词性和中文意思，AI 判分并给词根助记、同近义辨析。"></textarea>'
     +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
@@ -706,6 +744,7 @@ function bindAI(){
     aiPaint('aiOut',aiMd(hit));
     var v0=aiVerdictOf(hit);
     aiShowMark(v0);
+    tdOnJudged(v0,hit);
     if(f){f.classList.add('show');f.innerHTML='⚡ 同一作答已判过，这是本地缓存结果（未消耗额度）· <button class="ai-pick" id="aiReask">重新判分</button>';
      var rb=document.getElementById('aiReask');if(rb)rb.addEventListener('click',function(){aiDoSend(true);});}
     return;
@@ -722,6 +761,7 @@ function bindAI(){
     var v=aiVerdictOf(text);
     aiFeedbackShow(v);
     aiShowMark(v);
+    tdOnJudged(v,text);
     if(f2){f2.classList.add('show');f2.textContent='模型 '+aiCfg.model+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
    }
   });
@@ -795,6 +835,192 @@ openQuiz=function(ty){
    aiStream(aiCardPrompt(x),panel);
   });
  }
+};
+
+
+/* ==== 今日学习（td 模块）：每日学习包 + AI 批改联动 + 艾宾浩斯 ==== */
+function tdDayNum(){var d=new Date();return Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/86400000);}
+var TD_APPLIED=['speech','letter','notice','ad','manual','report'];
+var TD_LISTEN=['自由复述本周错词：对着镜子把本周答错的词条用英文说 5 分钟','政府工作报告双语跟读 15 分钟（中英对照逐段）','CGTN 新闻影子跟读 10 分钟（落后半句复读）','TED 演讲复述：听 1 分钟暂停，用英文复述 1 分钟','经济学人精听一段 + 口头概述大意','专八 mini-lecture 记笔记后口头复述','本周真题段落视译 1 遍（看中文说英文）'];
+var tdSession=null;
+function tdWLabelOf(t){for(var i=0;i<AI_WTYPES.length;i++)if(AI_WTYPES[i][0]===t)return AI_WTYPES[i][1];return t;}
+function tdGen(){
+ var day=tdDayNum();var dow=new Date().getDay();
+ var vList=[];var vStart=(day*10)%VOCAB.length;
+ for(var i=0;i<10;i++)vList.push((vStart+i)%VOCAB.length);
+ var wType,wTheme=-1,wReq='',wLabel='';
+ if(dow===2){wType='essay448';wTheme=Math.floor(day/7)%ESSAY.length;wReq='只交提纲：中心论点+三个分论点+各配一例一金句';wLabel='448 大作文 · 审题+提纲';}
+ else if(dow===4){wType='essay211';wReq='400 词标准';wLabel='211 英语作文';}
+ else if(dow===6){wType='essay448';wTheme=Math.floor(day/7)%ESSAY.length;wReq='全文成篇 1000-1200 字（用周二的提纲扩写）';wLabel='448 大作文 · 全文成篇';}
+ else if(dow===0){wType='essay448';wTheme=-1;wReq='重写本周 AI 批改中得分最低的一篇（把原题目贴在这里）';wLabel='自由写作 · 重写最弱一篇';}
+ else{wType=TD_APPLIED[day%TD_APPLIED.length];wLabel=tdWLabelOf(wType);}
+ var newPool=POOL.filter(function(x){return x.type==='词条'&&!st.srs[x.key];}).length;
+ var mist=POOL.filter(function(x){var r=st.srs[x.key];return r&&r.lapse>0;}).length;
+ var over0=typeStats('词条').over+typeStats('名解').over;
+ st.daily={date:ds(new Date()),vList:vList,vQueue:vList.slice(),vDone:0,psg:day%PSG.length,
+  wType:wType,wTheme:wTheme,wReq:wReq,wLabel:wLabel,
+  newGoal:Math.min(10,newPool),newCnt:0,drillGoal:mist>=5?5:3,drillCnt:0,
+  done:{rev:over0===0?1:0,neu:newPool===0?1:0,vocab:0,trans:0,write:0,drill:0,listen:0,note:0},note:'',sum:''};
+}
+function tdEnsure(){
+ if(!st.daily||st.daily.date!==ds(new Date())){
+  if(st.daily&&st.daily.date){
+   st.dailyHist=st.dailyHist||{};
+   var dn=0;for(var kk in st.daily.done)if(st.daily.done[kk])dn++;
+   st.dailyHist[st.daily.date]=dn;
+   var ks=Object.keys(st.dailyHist);
+   if(ks.length>30){ks.sort();ks.slice(0,ks.length-30).forEach(function(k){delete st.dailyHist[k];});}
+  }
+  tdGen();save();
+ }
+}
+function tdCheckLatches(){
+ var D=st.daily;if(!D)return;var ch=false;
+ if(!D.done.rev&&(typeStats('词条').over+typeStats('名解').over===0)){D.done.rev=1;ch=true;}
+ if(!D.done.neu&&D.newCnt>=D.newGoal){D.done.neu=1;ch=true;}
+ if(ch)save();
+}
+/* grade 包装：先改 daily 再委托（共用原 grade 的 save/云同步）。
+   注：AI 词汇陪练的自动 grade('v|'...) 也走此包装并计入 todayCount/history，视为特性（判过=复习过）。*/
+var _tdGrade=grade;
+grade=function(k,ok){
+ tdEnsure();
+ var wasNew=!st.srs[k];var pfx=k.split('|')[0];
+ if(wasNew&&(pfx==='ci'||pfx==='ms')&&st.daily.newCnt<st.daily.newGoal)st.daily.newCnt++;
+ _tdGrade(k,ok);
+ tdCheckLatches();
+ tdRefreshLite();
+};
+function tdStartVocab(){tdEnsure();var D=st.daily;if(!D.vQueue.length)return;
+ tdSession={task:'vocab'};aiMode='ci';aiCiSrc='vocab';aiVItem=VOCAB[D.vQueue[0]];go('ai');}
+function tdStartTrans(){tdEnsure();tdSession={task:'trans'};aiMode='trans';aiPsg=st.daily.psg;aiSrcOpen=false;go('ai');}
+function tdStartWrite(){tdEnsure();var D=st.daily;tdSession={task:'write'};aiMode='write';
+ aiWType=D.wType;aiWTheme=D.wTheme;aiWReq=D.wReq;go('ai');}
+function tdStartDrill(){tdEnsure();tdSession={task:'drill'};aiMode='ci';aiCiSrc='ci';aiItem=aiDraw('词条');go('ai');}
+function tdOnJudged(v,text){
+ tdEnsure();var D=st.daily;
+ if(aiMode==='trans'&&text&&+aiPsg===+D.psg){
+  if(!D.done.trans){D.done.trans=1;save();}
+ }else if(aiMode==='write'&&text){
+  if(!D.done.write){D.done.write=1;save();}
+ }else if(aiMode==='ci'&&aiCiSrc==='vocab'&&D.vQueue.length&&aiVItem===VOCAB[D.vQueue[0]]&&v!==null){
+  var w=VOCAB[D.vQueue[0]][0];
+  if(v){D.vQueue.shift();D.vDone++;grade('v|'+w,true);}
+  else{D.vQueue.push(D.vQueue.shift());grade('v|'+w,false);}
+  if(!D.vQueue.length){D.done.vocab=1;save();tdSession=null;}
+  else setTimeout(function(){
+   if(cur==='ai'&&aiMode==='ci'&&aiCiSrc==='vocab'&&st.daily.vQueue.length){
+    aiVItem=VOCAB[st.daily.vQueue[0]];aiRefresh();
+   }},1500);
+ }else if(aiMode==='ci'&&aiCiSrc==='ci'&&v!==null&&D.drillCnt<D.drillGoal){
+  D.drillCnt++;if(D.drillCnt>=D.drillGoal)D.done.drill=1;save();
+ }
+}
+function tdForecast(){
+ var t0=new Date();t0.setHours(0,0,0,0);var s=t0.getTime();
+ var b=[0,0,0,0,0,0,0];
+ for(var k in st.srs){var r=st.srs[k];if(!r||!r.due)continue;
+  var i=Math.floor((r.due-s)/86400000);if(i<0)i=0;if(i<7)b[i]++;}
+ return b;
+}
+function tdTaskLines(){
+ var D=st.daily;var names={rev:'复习清零',neu:'新学词条',vocab:'今日词汇',trans:'真题翻译',write:'写作',drill:'词条加练',listen:'听说跟读',note:'复盘'};
+ var out=[];for(var k in names)out.push(names[k]+(D.done[k]?'✓':'✗'));
+ return out.join(' ');
+}
+function tdSummary(){
+ if(aiBusy)return;
+ if(!aiOk()){aiSetupOpen=true;go('ai');return;}
+ tdEnsure();
+ var today=ds(new Date());
+ var L=(st.log||[]).filter(function(l){return l.d===today;});
+ var wrong=L.filter(function(l){return !l.ok;}).map(function(l){return l.t;});
+ var s=aiStats();var D=st.daily;
+ var p='今日备考日报。距初试 '+aiDays()+' 天。任务完成情况：'+tdTaskLines()
+  +'\n今日抽背 '+st.todayCount+' 张。今日答错：'+(wrong.slice(0,40).join('、')||'无')
+  +'\nAI 判题 '+s.todayTotal+' 题，判对 '+s.todayCorrect+' 题，当前连对 '+s.streak+'。'
+  +'\n我的一句话复盘：'+(D.note||'（未写）')
+  +'\n请输出：1) 三句话总结今天；2) 按答错内容归类出最薄弱的两个知识域；3) 明天最优先做的 3 件事（要具体到可执行）；4) 一句克制的鼓励。全文 250 字内。';
+ var btn=document.getElementById('tdBtnSum');if(btn)btn.disabled=true;
+ aiStream(p,'tdSum',function(t){
+  var b2=document.getElementById('tdBtnSum');if(b2)b2.disabled=false;
+  if(t){tdEnsure();st.daily.sum=t;save();}
+ });
+}
+function tdTaskRow(icon,title,sub,btnText,btnId,doneFlag,prog){
+ return '<div class="td-task'+(doneFlag?' ok':'')+'">'
+  +'<span class="td-check">'+(doneFlag?'✓':'')+'</span>'
+  +'<div class="td-tb"><b>'+icon+' '+title+'</b><small>'+sub+'</small></div>'
+  +(prog?'<span class="td-prog">'+prog+'</span>':'')
+  +(btnText&&!doneFlag?'<button class="td-go" id="'+btnId+'">'+btnText+'</button>':'')
+  +'</div>';
+}
+function tdView(){
+ var D=st.daily;var dow=new Date().getDay();
+ var doneN=0;for(var k in D.done)if(D.done[k])doneN++;
+ var total=8;var pct=Math.round(doneN/total*100);
+ var over=typeStats('词条').over+typeStats('名解').over;
+ var p=PSG[D.psg];
+ var f=tdForecast();var fmax=Math.max.apply(null,f.concat([1]));
+ var dowN=['日','一','二','三','四','五','六'];
+ var h='<div class="td-wrap">';
+ h+='<div class="td-head"><div class="td-ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19"/><circle cx="22" cy="22" r="19" style="stroke-dasharray:'+(pct*1.194).toFixed(1)+' 999"/></svg><span>'+doneN+'/'+total+'</span></div>'
+  +'<div class="td-hb"><b>'+esc(D.date)+' · 周'+dowN[dow]+'</b><small>距初试 '+aiDays()+' 天 · 连续打卡 '+st.streak+' 天'+(doneN===total?' · 今日全清 🎉':'')+'</small></div></div>';
+ h+='<div class="td-fc"><span class="pl" style="margin:0">未来 7 天到期预测 · 艾宾浩斯曲线（1/2/4/7/15/30/60 天）</span><div class="td-fcbars">';
+ for(var i=0;i<7;i++){var lb=i===0?'今':(i===1?'明':'+'+i);
+  h+='<div class="td-fcb"><em>'+f[i]+'</em><i style="height:'+Math.max(3,Math.round(f[i]/fmax*46))+'px"></i><small>'+lb+'</small></div>';}
+ h+='</div></div>';
+ h+='<div class="td-list">';
+ h+=tdTaskRow('📥','复习清零',over>0?'到期 '+over+' 张（词条+名解），清完自动打勾':'今日到期已全部清零',over>0?'开始抽背':'','tdBtnRev',D.done.rev,'');
+ h+=tdTaskRow('🆕','新学词条 '+D.newGoal+' 张','抽背中遇到的新卡自动计入（新卡排在到期卡之后）','去新学','tdBtnNeu',D.done.neu,D.newCnt+'/'+D.newGoal);
+ h+=tdTaskRow('🔤','211 词汇 10 词','今日词表固定 · AI 判分自动过队，答错排队尾重来','AI 陪练','tdBtnVoc',D.done.vocab,D.vDone+'/10');
+ h+=tdTaskRow('📝','真题翻译 1 段',esc(p.s+' '+p.y+' · '+p.d+' · '+p.g)+' · 批改完成自动打勾','去翻译','tdBtnTr',D.done.trans,'');
+ h+=tdTaskRow('✍️','写作 · '+esc(D.wLabel),D.wReq?esc(D.wReq):'按周轮换文体','去写作','tdBtnWr',D.done.write,'');
+ h+=tdTaskRow('🎯','词条 AI 加练 '+D.drillGoal+' 题','优先抽错题与到期卡，判分回写记忆曲线','去加练','tdBtnDr',D.done.drill,D.drillCnt+'/'+D.drillGoal);
+ h+='<div class="td-task'+(D.done.listen?' ok':'')+'"><span class="td-check">'+(D.done.listen?'✓':'')+'</span><div class="td-tb"><b>🎧 听说跟读 10 分钟</b><small>复试口语一票否决 · 今日材料：'+esc(TD_LISTEN[dow])+'</small></div><label class="td-cklabel"><input type="checkbox" id="tdCkListen"'+(D.done.listen?' checked':'')+'>完成</label></div>';
+ h+='<div class="td-task'+(D.done.note?' ok':'')+'"><span class="td-check">'+(D.done.note?'✓':'')+'</span><div class="td-tb"><b>🖋 一句话复盘</b><textarea id="tdNote" rows="2" placeholder="今天卡壳在哪？明天先补什么？（写完点页面任意处保存）">'+esc(D.note||'')+'</textarea></div></div>';
+ h+='</div>';
+ var t=TECH[tdDayNum()%TECH.length];
+ h+='<div class="td-tech"><span class="pl" style="margin:0">今日一技 · 翻译/写作技巧轮读</span><b>'+esc(t[0])+'</b><small>'+esc(t[1])+'</small></div>';
+ h+='<div class="td-sumbox"><button class="ai-send" id="tdBtnSum"'+(aiBusy?' disabled':'')+'>'+(doneN===total?'🌙 AI 总结今天':'AI 总结今天（未全清也可）')+'</button><div class="ai-out" id="tdSum"'+(D.sum?' style="display:block"':'')+'>'+(D.sum?aiMd(D.sum):'')+'</div></div>';
+ h+='</div>';
+ return h;
+}
+function bindTd(){
+ var g=function(id){return document.getElementById(id);};var b;
+ b=g('tdBtnRev');if(b)b.addEventListener('click',function(){openQuiz();});
+ b=g('tdBtnNeu');if(b)b.addEventListener('click',function(){openQuiz('词条');});
+ b=g('tdBtnVoc');if(b)b.addEventListener('click',tdStartVocab);
+ b=g('tdBtnTr');if(b)b.addEventListener('click',tdStartTrans);
+ b=g('tdBtnWr');if(b)b.addEventListener('click',tdStartWrite);
+ b=g('tdBtnDr');if(b)b.addEventListener('click',tdStartDrill);
+ b=g('tdCkListen');if(b)b.addEventListener('change',function(){tdEnsure();st.daily.done.listen=this.checked?1:0;save();tdRefreshLite();});
+ b=g('tdNote');if(b)b.addEventListener('change',function(){tdEnsure();st.daily.note=this.value.trim();st.daily.done.note=st.daily.note?1:0;save();tdRefreshLite();});
+ b=g('tdBtnSum');if(b)b.addEventListener('click',tdSummary);
+}
+function tdRefreshLite(){
+ if(cur!=='today')return;
+ var n=document.getElementById('tdNote');
+ if(n&&document.activeElement===n)return;
+ var v=document.getElementById('view');if(!v)return;
+ v.innerHTML=tdView();bindTd();
+}
+/* 导航注册：today 排侧栏第一位（在 AI 注册之后执行,unshift 置顶）*/
+NAVG[0][1].unshift('today');
+NAV.unshift(['today','今日学习']);
+MLB.today='今日';
+IC.today='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4M16 3v4M4 11h16M9 15.5h2.5"/></svg>';
+/* render 链：td → ai → 原始 */
+var _tdRender=render;
+render=function(){
+ if(cur==='today'){
+  document.querySelector('h1').textContent='今日学习';
+  tdEnsure();
+  document.getElementById('view').innerHTML=tdView();
+  bindTd();
+  return;
+ }
+ _tdRender();
 };
 
 setNav();
