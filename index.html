@@ -144,6 +144,58 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .qcard .ffb.ffshort.msfs1 .an{font-size:24px;line-height:1.55;text-align:center;width:auto}.qcard .ffb.msmid{justify-content:center}.qcard .ffb.msmid .an{font-size:20px;line-height:1.72;text-align:left;width:100%}.qcard .ffb.mslong .an{font-size:19.5px;line-height:1.7;text-align:left;width:100%}
 .spk{position:absolute;top:11px;right:13px;z-index:5;background:rgba(255,255,255,.22);border:0;border-radius:99px;padding:6px 11px;font-size:15px;line-height:1;cursor:pointer;transition:.15s}.spk:hover{background:rgba(255,255,255,.38)}.spk:active{transform:scale(.92)}
 .fc:not(.qcard) .maid{display:none}.fc:not(.qcard) .ffb{padding-bottom:42px}.fc:not(.qcard) .ffb .an{font-size:14.5px;line-height:1.4}
+/* ====== AI 助教 ====== */
+.ai-wrap{display:flex;flex-direction:column;gap:14px;max-width:860px}
+.ai-setup{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.ai-setup .pl{margin-bottom:8px}
+.ai-setup-grid{display:grid;grid-template-columns:1.6fr 1.2fr .9fr auto;gap:8px}
+.ai-setup input,.ai-setup select{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:9px 11px;font-family:inherit;font-size:13px;color:var(--ink);min-width:0}
+.ai-setup input:focus,.ai-setup select:focus{outline:none;border-color:var(--green)}
+.ai-setup .ai-test{border:0;background:var(--green);color:#f3efe6;border-radius:9px;padding:9px 16px;font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.ai-setup .ai-test:disabled{opacity:.55;cursor:default}
+.ai-hint{font-size:11.5px;color:var(--mut);margin-top:8px;line-height:1.7}
+.ai-hint b{color:var(--green)}
+.ai-status{font-size:11.5px;margin-top:6px}
+.ai-status.ok{color:var(--green)}
+.ai-status.err{color:var(--rust)}
+.ai-modes{display:flex;gap:8px;flex-wrap:wrap}
+.ai-mode{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 15px;font-family:inherit;font-size:13px;color:var(--ink);cursor:pointer;transition:.15s}
+.ai-mode:hover{border-color:var(--green)}
+.ai-mode.on{background:var(--green);border-color:var(--green);color:#f3efe6}
+.ai-task{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.ai-task .ai-q{font-size:15px;line-height:1.8;margin:8px 0 4px}
+.ai-task .ai-q b{font-family:"Noto Serif SC",serif;font-size:19px}
+.ai-task-meta{font-size:11.5px;color:var(--mut);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ai-pick{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;color:var(--ink);cursor:pointer}
+.ai-pick:hover{border-color:var(--green)}
+.ai-src{font-size:13.5px;line-height:1.9;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;max-height:180px;overflow-y:auto;white-space:pre-wrap}
+.ai-input-row{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ai-input-row textarea{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:14px;line-height:1.8;color:var(--ink);resize:vertical;min-height:88px}
+.ai-input-row textarea:focus{outline:none;border-color:var(--green)}
+.ai-actions{display:flex;gap:8px;align-items:center}
+.ai-send{border:0;background:var(--green);color:#f3efe6;border-radius:10px;padding:10px 22px;font-family:inherit;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(46,74,56,.22)}
+.ai-send:hover{transform:translateY(-1px)}
+.ai-send:disabled{opacity:.5;cursor:default;transform:none}
+.ai-stop{border:1px solid var(--line);background:var(--card);color:var(--rust);border-radius:10px;padding:10px 16px;font-family:inherit;font-size:13px;cursor:pointer;display:none}
+.ai-stop.show{display:inline-block}
+.ai-out{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;font-size:14.5px;line-height:2;display:none;word-break:break-word}
+.ai-out.show{display:block}
+.ai-out h4{font-family:"Noto Serif SC",serif;font-size:16px;margin:14px 0 6px;color:var(--green2)}
+.ai-out h4:first-child{margin-top:0}
+.ai-out b{color:var(--green2)}
+.ai-out ul{padding-left:20px;margin:4px 0}
+.ai-out li{margin:3px 0}
+.ai-out code{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px}
+.ai-out .cursor{display:inline-block;width:8px;height:16px;background:var(--green);vertical-align:-2px;animation:aiblink .9s step-end infinite}
+@keyframes aiblink{50%{opacity:0}}
+.ai-foot{font-size:11px;color:var(--mut);margin-top:10px;display:none}
+.ai-foot.show{display:block}
+.ai-quiz-btn{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:7px 14px;font-family:inherit;font-size:12.5px;cursor:pointer;margin-top:10px}
+.ai-quiz-btn:hover{background:rgba(255,255,255,.22)}
+.ai-quiz-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:10px;font-size:13.5px;line-height:1.9;max-height:300px;overflow-y:auto;display:none;text-align:left;color:var(--ink)}
+.ai-quiz-panel.show{display:block}
+@media(max-width:760px){.ai-setup-grid{grid-template-columns:1fr 1fr}.ai-wrap{max-width:none}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="apple-touch-icon" href="icon-180.png"><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="MTI上岸"><meta name="theme-color" content="#2e4a38"><meta name="mobile-web-app-capable" content="yes">
@@ -275,6 +327,239 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
 
 
 
+</script>
+<script>
+/* ====== AI 助教 · 自建 Claude 网关（零接触注入模块）====== */
+(function(){
+var AIK='mti_ai_v1';
+var aiCfg;
+try{aiCfg=JSON.parse(localStorage.getItem(AIK)||'{}');}catch(e){aiCfg={};}
+aiCfg.url=aiCfg.url||'https://ganlin-ai-token-gateway.ganlin-ai-gateway.workers.dev';
+aiCfg.model=aiCfg.model||'claude-opus-4-8';
+
+var AI_MODELS=[
+ ['claude-opus-4-8','Opus 4.8 · 最强'],
+ ['claude-sonnet-5','Sonnet 5 · 均衡'],
+ ['claude-haiku-4-5-20251001','Haiku 4.5 · 最快']
+];
+var AI_SYS='你是"南昌大学 MTI 英语口译(055102) 2027 考研"的专属备考助教。考试科目：101政治、211翻译硕士英语、357英语翻译基础、448汉语写作与百科知识；复试重口语与交传复述。回答一律用中文（词条/例句保留英文），考试导向，简洁分点，直接给可背诵、可落笔的表述，不要客套开场白。';
+
+var aiMode='trans';var aiItem=null;var aiPsg=-1;var aiAbort=null;var aiBusy=false;
+
+function aiSave(){localStorage.setItem(AIK,JSON.stringify(aiCfg));}
+function aiOk(){return !!(aiCfg.key&&aiCfg.url);}
+function aiBase(){return String(aiCfg.url||'').replace(/\/+$/,'');}
+
+/* ---- 迷你 Markdown（先 esc 再排版）---- */
+function aiMd(t){
+ var s=esc(t);
+ s=s.replace(/^#{2,4} *(.+)$/gm,'<h4>$1</h4>');
+ s=s.replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
+ s=s.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+ s=s.replace(/(^|\n)((?:[-•·] .*(?:\n|$))+)/g,function(_,p,block){
+   return p+'<ul>'+block.replace(/\n+$/,'').split('\n').map(function(l){return '<li>'+l.replace(/^[-•·] +/,'')+'</li>';}).join('')+'</ul>';
+ });
+ s=s.replace(/\n/g,'<br>');
+ s=s.replace(/<\/h4><br>/g,'</h4>').replace(/<\/ul><br>/g,'</ul>');
+ return s;
+}
+
+/* ---- 流式请求 ---- */
+function aiPaint(target,html){
+ var el=typeof target==='string'?document.getElementById(target):target;
+ if(!el)return;el.classList.add('show');el.innerHTML=html;
+}
+function aiStream(userText,target,onDone){
+ aiAbort=new AbortController();aiBusy=true;
+ var t0=Date.now();
+ aiPaint(target,'<span class="cursor"></span>');
+ fetch(aiBase()+'/v1/chat/completions',{
+  method:'POST',signal:aiAbort.signal,
+  headers:{'content-type':'application/json','authorization':'Bearer '+aiCfg.key},
+  body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:2400,
+   messages:[{role:'system',content:AI_SYS},{role:'user',content:userText}]})
+ }).then(function(r){
+  if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});
+  var rd=r.body.getReader(),dec=new TextDecoder(),buf='',full='';
+  function pump(){return rd.read().then(function(res){
+   if(res.done){fin(full,null);return;}
+   buf+=dec.decode(res.value,{stream:true});
+   var lines=buf.split('\n');buf=lines.pop();
+   lines.forEach(function(l){l=l.trim();if(l.indexOf('data:')!==0)return;var d=l.slice(5).trim();if(!d||d==='[DONE]')return;
+    try{var j=JSON.parse(d);var c=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
+     if(c){full+=c;aiPaint(target,aiMd(full)+'<span class="cursor"></span>');}}catch(e){}});
+   return pump();});}
+  return pump();
+  function fin(text){aiPaint(target,aiMd(text||'（无内容返回）'));aiBusy=false;onDone&&onDone(text,Date.now()-t0);}
+ }).catch(function(e){
+  aiBusy=false;
+  if(e.name==='AbortError'){aiPaint(target,'<i style="color:var(--mut)">（已停止）</i>');onDone&&onDone(null,0);return;}
+  aiPaint(target,'<span style="color:var(--rust)">⚠ 请求失败：'+esc(e.message)+'</span><br><span style="color:var(--mut);font-size:12px">检查网关地址与 Key 是否正确、网络是否可达。</span>');
+  onDone&&onDone(null,0);
+ });
+}
+
+/* ---- 抽题 ---- */
+function aiDraw(type){
+ var pool=POOL.filter(function(x){return x.type===type;});
+ var due=pool.filter(function(x){var r=st.srs[x.key];return (r&&(r.lapse>0||r.due<=Date.now()))||!r;});
+ var src=due.length?due:pool;
+ return src[Math.floor(Math.random()*src.length)];
+}
+function aiPsgLabel(p,i){return p.s+' '+p.y+' · '+p.d+' · '+p.g;}
+function aiDefaultPsg(){
+ for(var i=0;i<PSG.length;i++)if(PSG[i].s.indexOf('南昌')>=0)return i;
+ return 0;
+}
+
+/* ---- 视图 ---- */
+function aiView(){
+ if(aiPsg<0)aiPsg=aiDefaultPsg();
+ if(!aiItem||((aiMode==='ci')!==(aiItem.type==='词条')))aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
+ var h='<div class="ai-wrap">';
+ h+='<div class="ai-setup"><div class="pl">连接设置 · 自建 CLAUDE 网关</div><div class="ai-setup-grid">'
+  +'<input id="aiUrl" placeholder="网关地址 https://…" value="'+esc(aiCfg.url)+'">'
+  +'<input id="aiKey" type="password" placeholder="API Key（只存本机浏览器）" value="'+esc(aiCfg.key||'')+'">'
+  +'<select id="aiModel">'+AI_MODELS.map(function(m){return '<option value="'+m[0]+'"'+(aiCfg.model===m[0]?' selected':'')+'>'+m[1]+'</option>';}).join('')+'</select>'
+  +'<button class="ai-test" id="aiTest">测试连接</button></div>'
+  +'<div class="ai-status" id="aiStatus"></div>'
+  +'<div class="ai-hint">Key 仅保存在<b>本机浏览器</b>，不会出现在网页源码或仓库里。建议在网关控制台为本站单独创建一把 Key（可独立统计、随时吊销）。批改类任务建议用 <b>Opus</b>，快问快答用 <b>Haiku</b>。</div></div>';
+ h+='<div class="ai-modes">'+[['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['free','💬 自由问答']].map(function(m){
+   return '<button class="ai-mode'+(aiMode===m[0]?' on':'')+'" data-m="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div>';
+ h+=aiTaskHtml();
+ h+='<div class="ai-out" id="aiOut"></div><div class="ai-foot" id="aiFoot"></div></div>';
+ return h;
+}
+
+function aiTaskHtml(){
+ var h='<div class="ai-task">';
+ if(aiMode==='trans'){
+  var p=PSG[aiPsg];
+  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">真题段落</span>'
+   +'<select class="ai-pick" id="aiPsgSel">'+PSG.map(function(x,i){return '<option value="'+i+'"'+(i===aiPsg?' selected':'')+'>'+esc(aiPsgLabel(x,i))+'</option>';}).join('')+'</select>'
+   +'<button class="ai-pick" id="aiPsgRand">🎲 随机换一条</button></div>'
+   +'<div class="ai-src">'+esc(p.src)+'</div>'
+   +'<div class="ai-input-row"><textarea id="aiInput" rows="6" placeholder="把你的译文写在这里（'+(p.d==='英译汉'?'写中文':'写英文')+'），AI 按 357 阅卷标准批改并对照参考译文。"></textarea>'
+   +'<div class="ai-actions"><button class="ai-send" id="aiSend">批改我的译文</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+ }else if(aiMode==='ci'){
+  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">词条陪练 · 优先抽到期/错题</span><button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
+   +'<div class="ai-q">请给出英译/全称：<b>'+esc(aiItem.q)+'</b></div>'
+   +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下你的答案，AI 严格判分并给记忆钩子。"></textarea>'
+   +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+ }else if(aiMode==='ms'){
+  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">448 名解批改 · 三段式</span><button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
+   +'<div class="ai-q">名词解释：<b>'+esc(aiItem.q)+'</b></div>'
+   +'<div class="ai-input-row"><textarea id="aiInput" rows="6" placeholder="按「定义 → 背景 → 意义」写 150-200 字，AI 按采分点打分。"></textarea>'
+   +'<div class="ai-actions"><button class="ai-send" id="aiSend">按采分点打分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+ }else{
+  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">自由问答 · 任何备考问题</span></div>'
+   +'<div class="ai-input-row"><textarea id="aiInput" rows="4" placeholder="例：帮我列 10 个「新质生产力」相关的时政词条并给官方译法 / 448 大作文「科技与人文」给个提纲"></textarea>'
+   +'<div class="ai-actions"><button class="ai-send" id="aiSend">发送</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+ }
+ return h+'</div>';
+}
+
+function aiPrompt(userText){
+ if(aiMode==='trans'){
+  var p=PSG[aiPsg];
+  return '请以 MTI 357 阅卷人视角批改下面这段真题翻译。\n【题源】'+p.s+' '+p.y+' '+p.d+'（'+p.g+'）\n【原文】\n'+p.src+'\n【参考译文】\n'+p.ref+'\n【我的译文】\n'+userText
+   +'\n\n要求：1) 给预估档位（优/良/中/需重练）和主要扣分点；2) 逐句挑出误译、漏译、欠妥表达并给改法；3) 对照参考译文点出 2-3 处值得借鉴的处理；4) 给一版润色后的完整译文。';
+ }
+ if(aiMode==='ci'){
+  return '词条互译判分。词条：'+aiItem.q+'（标准答案：'+aiItem.a+(aiItem.m?'；助记：'+aiItem.m:'')+'）。我的作答：'+(userText||'（空白，我不会）')
+   +'。请：1) 判定得分/不得分（考试标准，拼写大小写从严）；2) 指出问题；3) 给一个词根或联想记忆钩子；4) 顺带补充 1-2 个同主题高频词条及译法。';
+ }
+ if(aiMode==='ms'){
+  return '448 名词解释批改。词条：'+aiItem.q+'。参考答案要点：'+aiItem.a+(aiItem.m?'；采分点：'+aiItem.m:'')+'。我的作答：\n'+(userText||'（空白）')
+   +'\n请：1) 按「定义/背景/意义」三段逐项对照采分点给分（满分10）；2) 指出缺哪几个采分点；3) 给一版 150-200 字可直接背诵的标准答案。';
+ }
+ return userText;
+}
+
+function bindAI(){
+ var $=function(id){return document.getElementById(id);};
+ $('aiUrl').addEventListener('change',function(){aiCfg.url=this.value.trim();aiSave();});
+ $('aiKey').addEventListener('change',function(){aiCfg.key=this.value.trim();aiSave();});
+ $('aiModel').addEventListener('change',function(){aiCfg.model=this.value;aiSave();});
+ $('aiTest').addEventListener('click',function(){
+  aiCfg.url=$('aiUrl').value.trim();aiCfg.key=$('aiKey').value.trim();aiSave();
+  var s=$('aiStatus');s.className='ai-status';s.textContent='测试中…';
+  fetch(aiBase()+'/v1/models',{headers:{authorization:'Bearer '+aiCfg.key}}).then(function(r){
+   if(!r.ok)throw new Error('HTTP '+r.status);return r.json();
+  }).then(function(d){var n=(d.data||d.models||[]).length;s.className='ai-status ok';s.textContent='✓ 已连通，网关开放 '+n+' 个模型，Key 有效。';})
+  .catch(function(e){s.className='ai-status err';s.textContent='✗ 连接失败：'+e.message+'（检查地址 / Key）';});
+ });
+ document.querySelectorAll('.ai-mode').forEach(function(b){b.addEventListener('click',function(){
+  aiMode=this.getAttribute('data-m');aiItem=null;
+  document.getElementById('view').innerHTML=aiView();bindAI();
+ });});
+ var sel=$('aiPsgSel');if(sel)sel.addEventListener('change',function(){aiPsg=+this.value;document.getElementById('view').innerHTML=aiView();bindAI();});
+ var rnd=$('aiPsgRand');if(rnd)rnd.addEventListener('click',function(){aiPsg=Math.floor(Math.random()*PSG.length);document.getElementById('view').innerHTML=aiView();bindAI();});
+ var nxt=$('aiNext');if(nxt)nxt.addEventListener('click',function(){aiItem=aiDraw(aiMode==='ms'?'名解':'词条');document.getElementById('view').innerHTML=aiView();bindAI();});
+ $('aiSend').addEventListener('click',function(){
+  if(aiBusy)return;
+  if(!aiOk()){var s=$('aiStatus');s.className='ai-status err';s.textContent='✗ 先在上方填入网关 Key 并保存。';window.scrollTo(0,0);return;}
+  var txt=$('aiInput').value.trim();
+  if(aiMode!=='ci'&&!txt)return;
+  $('aiStop').classList.add('show');
+  $('aiSend').disabled=true;
+  aiStream(aiPrompt(txt),'aiOut',function(text,ms){
+   var stop=document.getElementById('aiStop');if(stop)stop.classList.remove('show');
+   var send=document.getElementById('aiSend');if(send)send.disabled=false;
+   var f=document.getElementById('aiFoot');
+   if(text&&f){f.classList.add('show');f.textContent='模型 '+aiCfg.model+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
+  });
+ });
+ $('aiStop').addEventListener('click',function(){if(aiAbort)aiAbort.abort();});
+}
+
+/* ---- 注册导航（运行时注入，不改原数据行）---- */
+NAVG[3][1].push('ai');
+NAV.push(['ai','AI 助教']);
+MLB.ai='AI';
+IC.ai='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 4v3M9 15h6"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/></svg>';
+
+/* ---- 路由包装 ---- */
+var _aiRender=render;
+render=function(){
+ if(cur==='ai'){
+  document.querySelector('h1').textContent='AI 助教';
+  if(!document.getElementById('aiOut')){
+   document.getElementById('view').innerHTML=aiView();
+   bindAI();
+  }
+  return;
+ }
+ _aiRender();
+};
+
+/* ---- 刷题卡「AI 讲解」---- */
+var _aiOpenQuiz=openQuiz;
+openQuiz=function(ty){
+ _aiOpenQuiz(ty);
+ var ovl=document.getElementById('ovl');
+ if(!ovl||!ovl.classList.contains('on'))return;
+ if(!document.getElementById('aiQuizBtn')){
+  var btn=document.createElement('button');
+  btn.id='aiQuizBtn';btn.className='ai-quiz-btn';btn.textContent='🤖 AI 讲解这张卡';
+  btn.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60';
+  var panel=document.createElement('div');
+  panel.id='aiQuizPanel';panel.className='ai-quiz-panel';
+  panel.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:64px;width:min(680px,92vw);z-index:60;box-shadow:0 18px 40px rgba(40,35,20,.25)';
+  ovl.appendChild(panel);ovl.appendChild(btn);
+  btn.addEventListener('click',function(){
+   if(aiBusy)return;
+   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+   var x=queue[qi];if(!x)return;
+   panel.classList.add('show');
+   aiStream('讲解这张备考卡片，帮我彻底记住。类型：'+x.type+'；题目：'+x.q+'；答案：'+x.a+(x.m?'；已有助记：'+x.m:'')
+    +'。请给：1) 一句话核心记忆点；2) 易混项辨析；3) 出题角度（会怎么考）；4) 一个新的记忆钩子。全文 200 字以内。',panel);
+  });
+ }
+};
+
+setNav();
+})();
 </script>
 </body>
 </html>
