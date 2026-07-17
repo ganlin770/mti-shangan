@@ -202,6 +202,17 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-quiz-btn:hover{background:rgba(255,255,255,.22)}
 .ai-quiz-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:10px;font-size:13.5px;line-height:1.9;max-height:300px;overflow-y:auto;display:none;text-align:left;color:var(--ink)}
 .ai-quiz-panel.show{display:block}
+
+.ai-pick.on{background:var(--green);border-color:var(--green);color:#f3efe6}
+.ai-mark{display:none;margin-top:-2px;padding:11px 14px;background:var(--card);border:1px dashed var(--line);border-radius:12px;font-size:13px;align-items:center;gap:9px;flex-wrap:wrap}
+.ai-mark.show{display:flex}
+.ai-mark .yes2{border:0;background:var(--green);color:#f3efe6;border-radius:8px;padding:7px 16px;font-family:inherit;font-size:12.5px;cursor:pointer}
+.ai-mark .no2{border:0;background:#f0e6dd;color:var(--rust);border-radius:8px;padding:7px 16px;font-family:inherit;font-size:12.5px;cursor:pointer}
+.ai-mark button:disabled{opacity:.45;cursor:default}
+.ai-mark i{font-style:normal;color:var(--green);font-size:12px}
+.ai-winput{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:9px 12px;font-family:inherit;font-size:13.5px;color:var(--ink);width:100%}
+.ai-winput:focus{outline:none;border-color:var(--green)}
+.ai-row-btn{margin-top:9px}
 @media(max-width:760px){.ai-setup-grid{grid-template-columns:1fr 1fr}.ai-wrap{max-width:none}}
 
 </style>
@@ -337,7 +348,7 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
 
 </script>
 <script>
-/* ====== AI 助教 · 自建 Claude 网关（零接触注入模块）====== */
+/* ====== AI 助教 · 自建 Claude 网关（零接触注入模块 v3）====== */
 (function(){
 var AIK='mti_ai_v1';
 var aiCfg;
@@ -350,12 +361,15 @@ var AI_MODELS=[
  ['claude-sonnet-5','Sonnet 5 · 均衡'],
  ['claude-haiku-4-5-20251001','Haiku 4.5 · 最快']
 ];
-var AI_SYS='你是"南昌大学 MTI 英语口译(055102) 2027 考研"的专属备考助教。考试科目：101政治、211翻译硕士英语、357英语翻译基础、448汉语写作与百科知识；复试重口语与交传复述。回答一律用中文（词条/例句保留英文），考试导向，简洁分点，直接给可背诵、可落笔的表述，不要客套开场白。';
+var AI_SYS='你是"南昌大学 MTI 英语口译(055102) 2027 考研"的专属备考助教。考试科目：101政治、211翻译硕士英语、357英语翻译基础、448汉语写作与百科知识；复试重口语与交传复述。你所在的备考站内置：357高频词条库、448名解库（含采分点）、119条真题翻译段落（含参考译文）、211高频词汇2700+、448应用文考纲要点、大作文母题库。回答一律用中文（词条/例句保留英文），考试导向，简洁分点，直接给可背诵、可落笔的表述，不要客套开场白。';
 
-var aiMode='trans';var aiItem=null;var aiPsg=-1;var aiAbort=null;var aiBusy=false;var aiSetupOpen=false;var aiSrcOpen=false;
+var aiMode='trans';var aiItem=null;var aiVItem=null;var aiPsg=-1;var aiAbort=null;var aiBusy=false;
+var aiSetupOpen=false;var aiSrcOpen=false;var aiCiSrc='ci';
+var aiWType='speech';var aiWTheme=-1;var aiWReq='';
+var AIPOOL={};POOL.forEach(function(x){AIPOOL[x.key]=x;});
+
 function aiRefresh(){document.getElementById('view').innerHTML=aiView();bindAI();}
 function aiModelLabel(){for(var i=0;i<AI_MODELS.length;i++)if(AI_MODELS[i][0]===aiCfg.model)return AI_MODELS[i][1];return aiCfg.model;}
-
 function aiSave(){localStorage.setItem(AIK,JSON.stringify(aiCfg));}
 function aiOk(){return !!(aiCfg.key&&aiCfg.url);}
 function aiBase(){return String(aiCfg.url||'').replace(/\/+$/,'');}
@@ -374,7 +388,7 @@ function aiMd(t){
  return s;
 }
 
-/* ---- 流式请求 ---- */
+/* ---- 流式请求（按 id 现查，免疫重渲染）---- */
 function aiPaint(target,html){
  var el=typeof target==='string'?document.getElementById(target):target;
  if(!el)return;el.classList.add('show');el.innerHTML=html;
@@ -386,13 +400,13 @@ function aiStream(userText,target,onDone){
  fetch(aiBase()+'/v1/chat/completions',{
   method:'POST',signal:aiAbort.signal,
   headers:{'content-type':'application/json','authorization':'Bearer '+aiCfg.key},
-  body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:2400,
+  body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:2600,
    messages:[{role:'system',content:AI_SYS},{role:'user',content:userText}]})
  }).then(function(r){
   if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});
   var rd=r.body.getReader(),dec=new TextDecoder(),buf='',full='';
   function pump(){return rd.read().then(function(res){
-   if(res.done){fin(full,null);return;}
+   if(res.done){fin(full);return;}
    buf+=dec.decode(res.value,{stream:true});
    var lines=buf.split('\n');buf=lines.pop();
    lines.forEach(function(l){l=l.trim();if(l.indexOf('data:')!==0)return;var d=l.slice(5).trim();if(!d||d==='[DONE]')return;
@@ -416,16 +430,25 @@ function aiDraw(type){
  var src=due.length?due:pool;
  return src[Math.floor(Math.random()*src.length)];
 }
-function aiPsgLabel(p,i){return p.s+' '+p.y+' · '+p.d+' · '+p.g;}
+function aiDrawV(){return VOCAB[Math.floor(Math.random()*VOCAB.length)];}
+function aiPsgLabel(p){return p.s+' '+p.y+' · '+p.d+' · '+p.g;}
 function aiDefaultPsg(){
  for(var i=0;i<PSG.length;i++)if(PSG[i].s.indexOf('南昌')>=0)return i;
  return 0;
 }
+function aiCardPrompt(x){
+ return '讲解这张备考卡片，帮我彻底记住。类型：'+x.type+'；题目：'+x.q+'；答案：'+x.a+(x.m?'；已有助记：'+x.m:'')
+  +'。请给：1) 一句话核心记忆点；2) 易混项辨析；3) 出题角度（会怎么考）；4) 一个新的记忆钩子。全文 200 字以内。';
+}
 
 /* ---- 视图 ---- */
+var AI_WTYPES=[['speech','应用文 · 演讲稿'],['letter','应用文 · 商务信函'],['notice','应用文 · 通知'],['ad','应用文 · 广告'],['manual','应用文 · 说明书'],['report','应用文 · 报告'],['essay448','448 大作文'],['essay211','211 英语作文']];
+function aiWTypeLabel(){for(var i=0;i<AI_WTYPES.length;i++)if(AI_WTYPES[i][0]===aiWType)return AI_WTYPES[i][1];return aiWType;}
+
 function aiView(){
  if(aiPsg<0)aiPsg=aiDefaultPsg();
- if(!aiItem||((aiMode==='ci')!==(aiItem.type==='词条')))aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
+ if(!aiItem&&(aiMode==='ci'||aiMode==='ms'))aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
+ if(!aiVItem)aiVItem=aiDrawV();
  var h='<div class="ai-wrap">';
  if(aiOk()&&!aiSetupOpen){
   h+='<div class="ai-setup ai-setup--slim"><span class="ai-slim-dot"></span><span>已连接自建网关</span><b>'+esc(aiModelLabel())+'</b><button class="ai-pick" id="aiCfgEdit">修改设置</button></div>';
@@ -438,10 +461,12 @@ function aiView(){
   +'<div class="ai-status" id="aiStatus"></div>'
   +'<div class="ai-hint">Key 仅保存在<b>本机浏览器</b>，不会出现在网页源码或仓库里。建议在网关控制台为本站单独创建一把 Key（可独立统计、随时吊销）。批改类任务建议用 <b>Opus</b>，快问快答用 <b>Haiku</b>。'+(aiOk()?' <button class="ai-pick" id="aiCfgClose" style="margin-left:6px">收起 ▲</button>':'')+'</div></div>';
  }
- h+='<div class="ai-modes">'+[['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['free','💬 自由问答']].map(function(m){
+ h+='<div class="ai-modes">'+[['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['write','✍️ 写作批改'],['free','💬 自由问答']].map(function(m){
    return '<button class="ai-mode'+(aiMode===m[0]?' on':'')+'" data-m="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div>';
  h+=aiTaskHtml();
- h+='<div class="ai-out" id="aiOut"></div><div class="ai-foot" id="aiFoot"></div></div>';
+ h+='<div class="ai-out" id="aiOut"></div>';
+ h+='<div class="ai-mark" id="aiMark"><span>把这题记入记忆系统：</span><button class="yes2" id="aiMarkYes">✓ 会了</button><button class="no2" id="aiMarkNo">✗ 记入错题</button><i id="aiMarkMsg"></i></div>';
+ h+='<div class="ai-foot" id="aiFoot"></div></div>';
  return h;
 }
 
@@ -450,25 +475,42 @@ function aiTaskHtml(){
  if(aiMode==='trans'){
   var p=PSG[aiPsg];
   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">真题段落</span>'
-   +'<select class="ai-pick" id="aiPsgSel">'+PSG.map(function(x,i){return '<option value="'+i+'"'+(i===aiPsg?' selected':'')+'>'+esc(aiPsgLabel(x,i))+'</option>';}).join('')+'</select>'
+   +'<select class="ai-pick" id="aiPsgSel">'+PSG.map(function(x,i){return '<option value="'+i+'"'+(i===aiPsg?' selected':'')+'>'+esc(aiPsgLabel(x))+'</option>';}).join('')+'</select>'
    +'<button class="ai-pick" id="aiPsgRand">🎲 随机换一条</button></div>'
    +'<div class="ai-src'+(aiSrcOpen?' open':'')+'" id="aiSrc">'+esc(p.src)+'</div>'
    +'<div class="ai-src-bar"><button class="ai-pick" id="aiSrcT">'+(aiSrcOpen?'收起原文 ▲':'展开全文 ▼')+'</button></div>'
    +'<div class="ai-input-row"><textarea id="aiInput" rows="6" placeholder="把你的译文写在这里（'+(p.d==='英译汉'?'写中文':'写英文')+'），AI 按 357 阅卷标准批改并对照参考译文。"></textarea>'
    +'<div class="ai-actions"><button class="ai-send" id="aiSend">批改我的译文</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
  }else if(aiMode==='ci'){
-  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">词条陪练 · 优先抽到期/错题</span><button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
-   +'<div class="ai-q">请给出英译/全称：<b>'+esc(aiItem.q)+'</b></div>'
-   +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下你的答案，AI 严格判分并给记忆钩子。"></textarea>'
-   +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+  var pills='<button class="ai-pick'+(aiCiSrc==='ci'?' on':'')+'" data-cisrc="ci">357 词条</button>'
+   +'<button class="ai-pick'+(aiCiSrc==='vocab'?' on':'')+'" data-cisrc="vocab">211 词汇</button>';
+  if(aiCiSrc==='vocab'){
+   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">词汇陪练 · 2708 词随机抽</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
+    +'<div class="ai-q">请给出中文释义：<b>'+esc(aiVItem[0])+'</b></div>'
+    +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下词性和中文意思，AI 判分并给词根助记、同近义辨析。"></textarea>'
+    +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+  }else{
+   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">词条陪练 · 优先抽到期/错题</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
+    +'<div class="ai-q">请给出英译/全称：<b>'+esc(aiItem.q)+'</b></div>'
+    +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下你的答案，AI 严格判分并给记忆钩子。判分后可一键记入记忆系统。"></textarea>'
+    +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+  }
  }else if(aiMode==='ms'){
   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">448 名解批改 · 三段式</span><button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
    +'<div class="ai-q">名词解释：<b>'+esc(aiItem.q)+'</b></div>'
-   +'<div class="ai-input-row"><textarea id="aiInput" rows="6" placeholder="按「定义 → 背景 → 意义」写 150-200 字，AI 按采分点打分。"></textarea>'
+   +'<div class="ai-input-row"><textarea id="aiInput" rows="6" placeholder="按「定义 → 背景 → 意义」写 150-200 字，AI 按采分点打分。判分后可一键记入记忆系统。"></textarea>'
    +'<div class="ai-actions"><button class="ai-send" id="aiSend">按采分点打分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
+ }else if(aiMode==='write'){
+  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">写作批改</span>'
+   +'<select class="ai-pick" id="aiWType">'+AI_WTYPES.map(function(t){return '<option value="'+t[0]+'"'+(aiWType===t[0]?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select>'
+   +(aiWType==='essay448'?'<select class="ai-pick" id="aiWTheme"><option value="-1">自拟 / 其他主题</option>'+ESSAY.map(function(e,i){return '<option value="'+i+'"'+(aiWTheme===i?' selected':'')+'>'+esc(e.theme)+'</option>';}).join('')+'</select>':'')
+   +'</div>'
+   +'<div class="ai-input-row"><input class="ai-winput" id="aiWReq" placeholder="题目 / 要求（可留空）" value="'+esc(aiWReq)+'">'
+   +'<textarea id="aiInput" rows="9" placeholder="'+(aiWType==='essay211'?'把你的英语作文粘贴到这里（400 词标准）':'把你的作文粘贴到这里，AI 按 448 考纲要点批改')+'"></textarea>'
+   +'<div class="ai-actions"><button class="ai-send" id="aiSend">批改作文</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
  }else{
   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">自由问答 · 任何备考问题</span></div>'
-   +'<div class="ai-input-row"><textarea id="aiInput" rows="4" placeholder="例：帮我列 10 个「新质生产力」相关的时政词条并给官方译法 / 448 大作文「科技与人文」给个提纲"></textarea>'
+   +'<div class="ai-input-row"><textarea id="aiInput" rows="4" placeholder="例：帮我列 10 个「新质生产力」相关的时政词条并给官方译法 / 交传笔记符号体系怎么练"></textarea>'
    +'<div class="ai-actions"><button class="ai-send" id="aiSend">发送</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
  }
  return h+'</div>';
@@ -478,15 +520,42 @@ function aiPrompt(userText){
  if(aiMode==='trans'){
   var p=PSG[aiPsg];
   return '请以 MTI 357 阅卷人视角批改下面这段真题翻译。\n【题源】'+p.s+' '+p.y+' '+p.d+'（'+p.g+'）\n【原文】\n'+p.src+'\n【参考译文】\n'+p.ref+'\n【我的译文】\n'+userText
-   +'\n\n要求：1) 给预估档位（优/良/中/需重练）和主要扣分点；2) 逐句挑出误译、漏译、欠妥表达并给改法；3) 对照参考译文点出 2-3 处值得借鉴的处理；4) 给一版润色后的完整译文。';
+   +'\n\n要求：1) 给预估档位（优/良/中/需重练）和主要扣分点；2) 逐句挑出误译、漏译、欠妥表达并给改法，如适用请标注对应翻译技巧名称（增译/减译/词性转换/语序调整/正说反译等）；3) 对照参考译文点出 2-3 处值得借鉴的处理；4) 给一版润色后的完整译文。';
  }
  if(aiMode==='ci'){
-  return '词条互译判分。词条：'+aiItem.q+'（标准答案：'+aiItem.a+(aiItem.m?'；助记：'+aiItem.m:'')+'）。我的作答：'+(userText||'（空白，我不会）')
+  if(aiCiSrc==='vocab'){
+   return '211 高频词汇测验。单词：'+aiVItem[0]+'（标准释义：'+aiVItem[1]+'）。我的作答：'+(userText||'（空白，我不会）')
+    +'。请：1) 判定得分/不得分（词性+核心义都对才得分）；2) 给词根/词缀或联想记忆钩子；3) 给 2 个易混近义词并一句话辨析；4) 给 1 个考研阅读风格的例句。';
+  }
+  return '357 词条互译判分。词条：'+aiItem.q+'（标准答案：'+aiItem.a+(aiItem.m?'；助记：'+aiItem.m:'')+'）。我的作答：'+(userText||'（空白，我不会）')
    +'。请：1) 判定得分/不得分（考试标准，拼写大小写从严）；2) 指出问题；3) 给一个词根或联想记忆钩子；4) 顺带补充 1-2 个同主题高频词条及译法。';
  }
  if(aiMode==='ms'){
   return '448 名词解释批改。词条：'+aiItem.q+'。参考答案要点：'+aiItem.a+(aiItem.m?'；采分点：'+aiItem.m:'')+'。我的作答：\n'+(userText||'（空白）')
    +'\n请：1) 按「定义/背景/意义」三段逐项对照采分点给分（满分10）；2) 指出缺哪几个采分点；3) 给一版 150-200 字可直接背诵的标准答案。';
+ }
+ if(aiMode==='write'){
+  var req=aiWReq||'未提供';
+  if(aiWType==='essay448'){
+   var extra='';
+   if(aiWTheme>=0&&ESSAY[aiWTheme]){
+    var E=ESSAY[aiWTheme];
+    var qs=Array.isArray(E.quotes)?E.quotes.slice(0,2).join('；'):String(E.quotes||'').slice(0,160);
+    extra='\n【站内母题参考】主题：'+E.theme+'；审题示例：'+String(E.exam||'').slice(0,200)+'；核心观点：'+String(E.view||'').slice(0,300)+(qs?'；可用金句：'+qs:'');
+   }
+   return '448 命题/材料作文批改（满分60，1000-1200字标准）。题目/要求：'+req+extra+'\n【我的作文】\n'+userText
+    +'\n请：1) 按审题立意/结构谋篇/论证材料/语言文采四维打分并给总分；2) 指出立意或结构的最大问题；3) 给升格建议（可直接替换的段落写法/论据/金句）；4) 给一版高分提纲。';
+  }
+  if(aiWType==='essay211'){
+   return 'MTI 211 英语作文批改（400 词标准，满分30）。题目/要求：'+req+'\n【我的作文】\n'+userText
+    +'\n请：1) 按内容切题/结构衔接/语法准确/词汇多样打分并给总分；2) 逐句挑出语法错误并给改法；3) 给 5 组可替换的高级表达（原表达→升级表达）；4) 给一版高分结构骨架（英文）。';
+  }
+  var kw={speech:'演讲',letter:'信函',ad:'广告',notice:'通知',manual:'说明书',report:'报告'}[aiWType]||'';
+  var tips=WTIPS.filter(function(t){return t[0].indexOf(kw)>=0;}).map(function(t){return t[0]+'：'+t[1];}).join('\n');
+  return '448 应用文批改（满分40）。文体：'+aiWTypeLabel()+'。题目/要求：'+req
+   +'\n【站内考纲要点】\n'+WTIPS[0][0]+'：'+WTIPS[0][1]+(tips?'\n'+tips:'')
+   +'\n【我的作文】\n'+userText
+   +'\n请：1) 按格式与要素（称谓/落款/日期等）/语体得当/内容切题/语言规范四维打分并给总分；2) 逐项指出问题与改法；3) 最后给该文体一版可背诵的满分框架模板。';
  }
  return userText;
 }
@@ -511,14 +580,41 @@ function bindAI(){
   aiMode=this.getAttribute('data-m');aiItem=null;
   aiRefresh();
  });});
+ document.querySelectorAll('[data-cisrc]').forEach(function(b){b.addEventListener('click',function(){
+  aiCiSrc=this.getAttribute('data-cisrc');
+  if(aiCiSrc==='vocab')aiVItem=aiDrawV();else aiItem=aiDraw('词条');
+  aiRefresh();
+ });});
  var sel=$('aiPsgSel');if(sel)sel.addEventListener('change',function(){aiPsg=+this.value;aiSrcOpen=false;aiRefresh();});
  var rnd=$('aiPsgRand');if(rnd)rnd.addEventListener('click',function(){aiPsg=Math.floor(Math.random()*PSG.length);aiSrcOpen=false;aiRefresh();});
- var nxt=$('aiNext');if(nxt)nxt.addEventListener('click',function(){aiItem=aiDraw(aiMode==='ms'?'名解':'词条');aiRefresh();});
+ var nxt=$('aiNext');if(nxt)nxt.addEventListener('click',function(){
+  if(aiMode==='ci'&&aiCiSrc==='vocab')aiVItem=aiDrawV();
+  else aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
+  aiRefresh();
+ });
+ var wt=$('aiWType');if(wt)wt.addEventListener('change',function(){var q=$('aiWReq');if(q)aiWReq=q.value;aiWType=this.value;aiRefresh();});
+ var wth=$('aiWTheme');if(wth)wth.addEventListener('change',function(){aiWTheme=+this.value;});
+ var wr=$('aiWReq');if(wr)wr.addEventListener('input',function(){aiWReq=this.value;});
+ var my=$('aiMarkYes'),mn=$('aiMarkNo');
+ function aiMark(ok){
+  if(!aiItem||!aiItem.key)return;
+  grade(aiItem.key,ok);
+  var msg=$('aiMarkMsg');if(msg)msg.textContent=ok?'已记入 ✓ 复习排期已升级':'已记入错题本，10 分钟后重现';
+  if(my)my.disabled=true;if(mn)mn.disabled=true;
+  setTimeout(function(){
+   if(cur!=='ai')return;
+   aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
+   aiRefresh();
+  },1300);
+ }
+ if(my)my.addEventListener('click',function(){aiMark(true);});
+ if(mn)mn.addEventListener('click',function(){aiMark(false);});
  var _sd=$('aiSend');if(_sd)_sd.addEventListener('click',function(){
   if(aiBusy)return;
-  if(!aiOk()){var s=$('aiStatus');s.className='ai-status err';s.textContent='✗ 先在上方填入网关 Key 并保存。';window.scrollTo(0,0);return;}
+  if(!aiOk()){aiSetupOpen=true;aiRefresh();var s=document.getElementById('aiStatus');if(s){s.className='ai-status err';s.textContent='✗ 先填入网关 Key 并测试连接。';}window.scrollTo(0,0);return;}
   var txt=$('aiInput').value.trim();
   if(aiMode!=='ci'&&!txt)return;
+  var mk=$('aiMark');if(mk){mk.classList.remove('show');var mg=$('aiMarkMsg');if(mg)mg.textContent='';if(my)my.disabled=false;if(mn)mn.disabled=false;}
   $('aiStop').classList.add('show');
   $('aiSend').disabled=true;
   aiStream(aiPrompt(txt),'aiOut',function(text,ms){
@@ -526,9 +622,34 @@ function bindAI(){
    var send=document.getElementById('aiSend');if(send)send.disabled=false;
    var f=document.getElementById('aiFoot');
    if(text&&f){f.classList.add('show');f.textContent='模型 '+aiCfg.model+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
+   if(text&&aiItem&&aiItem.key&&(aiMode==='ms'||(aiMode==='ci'&&aiCiSrc==='ci'))){
+    var mk2=document.getElementById('aiMark');if(mk2)mk2.classList.add('show');
+   }
   });
  });
  var _sp=$('aiStop');if(_sp)_sp.addEventListener('click',function(){if(aiAbort)aiAbort.abort();});
+}
+
+/* ---- 错题本行内 AI 讲解 ---- */
+function aiDecorateMist(){
+ var mig=document.getElementById('mig');if(!mig)return;
+ mig.querySelectorAll('.row').forEach(function(row){
+  if(row.querySelector('.ai-row-btn'))return;
+  var ra=row.querySelector('.ra');if(!ra)return;
+  var b=document.createElement('button');
+  b.className='ai-pick ai-row-btn';b.textContent='🤖 AI 讲解';
+  ra.appendChild(b);
+  b.addEventListener('click',function(ev){
+   ev.stopPropagation();
+   if(aiBusy)return;
+   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+   var x=AIPOOL[row.getAttribute('data-k')];if(!x)return;
+   var p=row.querySelector('.ai-quiz-panel');
+   if(!p){p=document.createElement('div');p.className='ai-quiz-panel';ra.appendChild(p);}
+   p.classList.add('show');
+   aiStream(aiCardPrompt(x),p);
+  });
+ });
 }
 
 /* ---- 注册导航（运行时注入，不改原数据行）---- */
@@ -549,6 +670,7 @@ render=function(){
   return;
  }
  _aiRender();
+ if(cur==='mist')aiDecorateMist();
 };
 
 /* ---- 刷题卡「AI 讲解」---- */
@@ -570,8 +692,7 @@ openQuiz=function(ty){
    if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
    var x=queue[qi];if(!x)return;
    panel.classList.add('show');
-   aiStream('讲解这张备考卡片，帮我彻底记住。类型：'+x.type+'；题目：'+x.q+'；答案：'+x.a+(x.m?'；已有助记：'+x.m:'')
-    +'。请给：1) 一句话核心记忆点；2) 易混项辨析；3) 出题角度（会怎么考）；4) 一个新的记忆钩子。全文 200 字以内。',panel);
+   aiStream(aiCardPrompt(x),panel);
   });
  }
 };
