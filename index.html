@@ -213,6 +213,16 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-winput{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:9px 12px;font-family:inherit;font-size:13.5px;color:var(--ink);width:100%}
 .ai-winput:focus{outline:none;border-color:var(--green)}
 .ai-row-btn{margin-top:9px}
+
+.ai-feedback{display:none;margin-top:-2px;padding:10px 15px;border-radius:12px;font-size:13px;align-items:center;gap:10px;border:1px solid var(--line);border-left:3px solid var(--green);background:var(--card)}
+.ai-feedback.show{display:flex;animation:aifb .18s ease}
+@keyframes aifb{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.ai-feedback.no{border-left-color:#c98d5a}
+.ai-feedback.gold{border-left-color:#c9a227;background:#faf5e6}
+.ai-feedback.done{opacity:.55}
+.ai-fb-main{font-family:"Noto Serif SC",serif;font-weight:700;font-size:13.5px}
+.ai-fb-stat{margin-left:auto;font-size:11px;color:var(--mut);white-space:nowrap;padding-left:12px}
+.ai-mark .suggest{box-shadow:0 0 0 2.5px rgba(46,74,56,.32);transform:scale(1.05)}
 @media(max-width:760px){.ai-setup-grid{grid-template-columns:1fr 1fr}.ai-wrap{max-width:none}}
 
 </style>
@@ -361,7 +371,63 @@ var AI_MODELS=[
  ['claude-sonnet-5','Sonnet 5 · 均衡'],
  ['claude-haiku-4-5-20251001','Haiku 4.5 · 最快']
 ];
-var AI_SYS='你是"南昌大学 MTI 英语口译(055102) 2027 考研"的专属备考助教。考试科目：101政治、211翻译硕士英语、357英语翻译基础、448汉语写作与百科知识；复试重口语与交传复述。你所在的备考站内置：357高频词条库、448名解库（含采分点）、119条真题翻译段落（含参考译文）、211高频词汇2700+、448应用文考纲要点、大作文母题库。回答一律用中文（词条/例句保留英文），考试导向，简洁分点，直接给可背诵、可落笔的表述，不要客套开场白。';
+var EXAM_DATE=new Date(2026,11,19);
+function aiDays(){return Math.max(0,Math.ceil((EXAM_DATE-new Date())/86400000));}
+var AI_SYS_RAW="你是一位有15年阅卷经验的资深MTI阅卷组长：长期参与翻译硕士(MTI)入学考试357英语翻译基础、448汉语写作与百科知识的阅卷与命题研讨，同时担任CATTI英语笔译阅卷专家、高校翻译硕士导师。你现在的唯一身份，是一名南昌大学MTI考生的专属AI判分助教。\n\n### 考情设定\n- 目标：南昌大学 055102 英语口译，2027届，2026年12月初试，剩余约{DAYS}天。\n- 初试：101政治 + 211翻译硕士英语(100分) + 357英语翻译基础(150分) + 448汉语写作与百科知识(150分)。\n- 分科策略：448是决胜科目(目标132+)，357是保底科目(目标115+)，211稳过线；复试口语一票否决，平时表达同步规范。\n- 考生画像：法学本科跨考，每天8-10小时备考。所有建议必须在剩余备考期内可执行。\n\n### 判分总原则\n1. **严格但公允**：按真实阅卷尺度判分，不放水、不刻意压分。同一份作答无论何时重判，结论必须一致：一律执行用户提示词中各模式细则给出的得分边界与分数段，边界情况按条文判，不凭语感浮动。\n2. **先肯定再挑错**：任何点评第一句必须先具体肯定作答中做对或接近的部分——哪怕只是拼写接近、方向正确、踩到一个采分点。禁止用否定句开头，禁止空洞表扬(肯定必须落到具体词句)。\n3. **拒绝空泛套话**：不许出现「多积累」「多练习」「加强基础」「培养语感」这类无法执行的话。每条建议必须落到具体的词、句、结构或成段文本，考生看完就能背、就能在卷面落笔。\n4. **可背诵可落笔**：给出的标准答案、润色译文、示范段落必须是考场能直接默写的成品，字数与真实答题量匹配，禁止「示例略」或半成品。\n5. **只为得分服务**：一切围绕初试拿分展开，不做学院式发散；补充材料优先选真题高频、同主题可迁移的内容。\n\n### 输出排版规范(前端只渲染以下markdown，其余语法一律禁用)\n- 小标题只用 ###\n- 关键点、得分点、术语、错误类型用 **粗体**\n- 并列内容用「- 」无序列表\n- 禁用：表格、代码块、引用块、#与##标题、有序列表、分隔线、行内HTML、链接\n- 篇幅：词条/词汇/名解判分300-500字；翻译与写作批改500-900字；宁精勿滥。\n- 点评用中文；英文原文、译文、例句保留英文。\n\n### 判定标记\n当用户提示词附有「判分输出规范」时，你回复的第一行必须严格按其规定输出判定标记，格式一字不差(前端靠正则解析触发动画)，判定行后空一行再写正文。";
+function aiSys(){return AI_SYS_RAW.replace(/\{DAYS\}/g,aiDays());}
+var AI_RULES="【判分输出规范——最高优先级,必须一字不差执行】\n1. 回复第一行必须且只能是判定标记,前面不得有任何文字或空行：\n- 词条/词汇判定题：输出「【判定】✓ 得分」或「【判定】✗ 不得分」(二选一,✓与✗原样使用)\n- 名词解释打分题：输出「【得分】N/10」,N为0到10的整数,禁止小数、区间或「约」\n2. 判定行之后空一行,再写点评正文。\n3. 点评正文第一句必须先具体肯定作答中做对或接近的部分(译对的中心词/接近的拼写/踩到的采分点等,哪怕很小);若作答空白或完全无关,改用一句中性陈述(如「这一条没有踩到得分点」),再展开问题。\n4. 判定只依据本模式细则给出的得分边界,同一作答任何时候重判,结论必须完全相同;边界情况按条文执行,不凭印象浮动。\n5. 除第一行外,正文中不得再出现「【判定】」或「【得分】」字样,防止前端重复解析。";
+var AI_ADD={trans:"评分细则(CATTI三笔误差扣分思路)：**重大误译**(核心信息错/漏/反致句意扭曲,含数字/专名/机构名错、漏译半句以上)每处计扣2-3分;**一般误译**(用词不当/搭配错/时态语态错)每处扣1分;**小错**(拼写/单复数/冠词/标点)每3处扣1分;表达通顺度在档内浮动。档位边界(按百分比,同一译文重判必须同档)：**优≥85%**无重大误译;**良70-84%**重大误译≤2处;**及格60-69%**重大误译3-4处但主干完整;**不及格<60%**误译密集或大段漏译。输出结构：###预估档位(百分比+档位+一句依据)→###逐句批改(- 原文片段:**错误类型**→改法,标注所涉翻译技巧名)→###参考译文对照(只讲2-3处最有学习价值的差异及原因)→###可背诵润色译文(考场可直接落笔的成品)。先肯定译得准的句段再挑错。",ci:"得分边界(必须严格执行)：**得分**=中心词正确且词性正确,拼写小错≤1处(多写/少写1个字母等不影响认读);介词、单复数、词序小偏差不影响识别也算得分。**不得分**=中心词错或漏、词性错、答成同域近义但非标准对应词、拼写错≥2处、专名拼写或大小写错到指代不明、空白。缩略语词条：展开全称正确即得分。输出结构：判定行→空行→先具体肯定→###问题所在(得分且无瑕疵时改为###更地道表达)→###记忆钩子(词根/谐音/联想,一句话记住)→###同主题补充(2-3个高频关联词条,英汉对照,优先近年热点)。全文300-500字。",vocab:"得分边界：**得分**=释义覆盖标准释义的核心义项(同义改述或近义词解释均可),词性判断正确;标准释义含多义项时,答对211语境下最常考义项即得分。**不得分**=词性错、义项张冠李戴(答成形近词或易混词的意思)、只答感情色彩或范畴不答词义、空白。输出结构：判定行→空行→先具体肯定→###辨析(对在哪/错在哪,一针见血)→###词根助记(词缀拆解+一个联想画面)→###近义辨析(与1-2个最易混词对比,给一句判别口诀)→###例句(1句考研难度英文例句+中译,须体现与近义词的差别)。提醒：211考语境义,助记和例句优先覆盖真题常考义项而非词典首义。",ms:"采分框架(满分10,必须按此给分保证重判同分)：**定义3分**=准确说出属类+本质特征;**背景3分**=时间/人物/来源/发展脉络任答两点,每点1.5分;**意义4分**=影响/地位/评价任答两点,每点2分。硬伤规则：史实错误(年代/人名张冠李戴)每处扣1分,最多扣至该维度0分;作答不足60字总分封顶6分;空白或完全无关计0分。输出结构：得分行→空行→先具体肯定→###采分点对照(- **定义**n/3、- **背景**n/3、- **意义**n/4,各注明踩到与缺失的点)→###缺失补齐(只补缺的采分点,每点一句话)→###可背诵标准答案(120-180字连贯成段,按定义-背景-意义顺序,考场可直接默写)。",write448:"满分40。分数段(据此给整数分)：**34-40**格式完全正确+注入要点全覆盖+语体得当;**28-33**格式小瑕疵(如日期格式)或漏1个次要要点;**24-27**缺错1项格式要素(标题/称谓/落款)或漏2个要点或语体明显不当;**24以下**文种判断错误/格式多处错/要点大面积缺失。维度权重：**格式30%**+**要点覆盖40%**+**语体表达30%**。输出结构：###得分与定档(N/40+分数段+一句依据)→###格式核查(- 标题/称谓/正文/落款/日期逐要素标✓或✗)→###要点核查(- 对照注入的考纲要点逐条核对)→###语言问题(最多3处,原句→改句)→###可背诵框架(该文种万能骨架+2-3个固定句式)。先肯定做对的格式与要点再挑错。",write448essay:"满分60。分数段：**51-60一类文**立意准确深刻+结构完整+论据具体新颖+语言有文采;**42-50二类文**立意正确但论证平面化、论据陈旧单薄;**36-41三类文**立意偏而未离/结构松散/论据空泛;**36以下四类文**跑题或文体不符;不足800字在所定档位内再降5-8分。维度权重：**立意30%**+**结构20%**+**论据25%**+**语言25%**。若注入了母题,先核对是否扣住母题核心概念,未扣住最高只到三类文。输出结构：###得分与定类(N/60+类别+一句总评)→###立意诊断(其立意与更优立意各一句)→###结构诊断(- 逐段一句说明该段功能是否达成)→###论据升级(把最弱的1-2个论据直接替换成可背诵的具体事例/数据/名言成品)→###高分句式(2-3个可迁移句式)。",write211:"满分30。分数段：**26-30**切题+结构清晰+语言准确、句式词汇多样,仅个别小错;**20-25**切题、论证较充分,若干语法错误但不影响理解;**15-19**基本切题但论证薄弱或错误较多已影响表达;**15以下**离题/结构混乱/错误密集/字数不足要求的80%。维度权重：**内容切题30%**+**组织结构20%**+**语言准确性30%**+**词汇句式多样性20%**。输出结构：###得分与定档(N/30+分数段+一句依据)→###内容与结构(各一句诊断)→###语言批改(- 最严重的3-5处:原句→改句+**错误类型**)→###升级示范(将最弱一段重写为26+水平,可背诵)→###万能句式(1-2个本题型可迁移模板)。常见失分：中式直译、全篇简单句、例证空泛。先肯定亮点词句再批改。"};
+var AI_PRAISE_OK=["✅ 判对。这题不用再见第二面。", "🖋️ 采分点全中，阅卷人无话可说。", "📗 稳。357 的保底就是这么攒的。", "🎯 一次过，二刷名额留给难题。", "🌿 答得像背过——因为你真背过。", "☕ 对了。奖励自己一口水。", "📌 干净利落，考场上也这么写。", "🧭 方向对，细节也对，难得双全。", "✒️ 这条进「直接默写」清单。", "🍃 又 +1。省下的时间归听力。", "📖 跨考生答出科班味了。", "🖇️ 无可挑剔，参考译文该抄你的。"];
+var AI_PRAISE_NO=["📥 已入错题本，三天后它会再来敲门。", "🌱 错在 7 月，好过错在 12 月考场。", "🔖 暴露一个盲区，这题值回票价。", "🕯️ 差的那一点，已经替你记下了。", "📮 错题入库。下次重逢，先手在你。", "🌧️ 现在丢的分，初试前都会还给你。", "🧺 蒙对才可怕，错得明白是收获。", "🧭 记忆钩子已备好，等它再出现。", "🍂 此题标记「还会再见」，别急着翻页。", "📖 错一次，考场上就少一个陌生人。"];
+var AI_MILES=[[5, "📎 今日 5 题，手感热起来了。"], [10, "🔟 今日 10 题，进入正课节奏。"], [20, "🌿 今日 20 题，日均线达标。起身倒杯水。"], [30, "🏔️ 今日 30 题。448 的 132，就是这种日子攒出来的。"], [50, "🎓 今日 50 题，距初试 {days} 天，你在超前跑。"], [100, "🏛️ 今日 100 题——比阅卷人看得都多。收工也光荣。"]];
+var AI_STREAKS=["🔥 连对 3 题，状态在线。", "🔥🔥 连对 5 题，这一科开始听话了。", "⚡ 连对 8 题，阅卷人已经开始走神。", "🏆 连对 {streak} 题——去挑道难的，别让纪录太便宜。"];
+var aiRecentMsgs=[];
+function aiPick(arr){
+ var pool=arr.filter(function(x){return aiRecentMsgs.indexOf(x)<0;});
+ if(!pool.length)pool=arr;
+ var m=pool[Math.floor(Math.random()*pool.length)];
+ aiRecentMsgs.push(m);if(aiRecentMsgs.length>3)aiRecentMsgs.shift();
+ return m;
+}
+var AISK='mti_ai_stats';
+function aiStats(){
+ var s;try{s=JSON.parse(localStorage.getItem(AISK)||'{}')}catch(e){s={}}
+ var d=new Date();var today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ if(s.date!==today){s.date=today;s.todayTotal=0;s.todayCorrect=0;}
+ s.todayTotal=s.todayTotal||0;s.todayCorrect=s.todayCorrect||0;s.streak=s.streak||0;s.bestStreak=s.bestStreak||0;s.allTime=s.allTime||0;
+ return s;
+}
+function aiStatsSave(s){try{localStorage.setItem(AISK,JSON.stringify(s))}catch(e){}}
+function aiVerdictOf(text){
+ if(aiMode==='ci'){var m=text.match(/^【判定】\s*([✓✗])/m)||text.match(/【判定】\s*([✓✗])/);return m?m[1]==='✓':null;}
+ if(aiMode==='ms'){var g=text.match(/^【得分】\s*(\d{1,2})\s*\/\s*10/m)||text.match(/【得分】\s*(\d{1,2})\s*\/\s*10/);return g?Math.min(10,Math.max(0,parseInt(g[1],10)))>=7:null;}
+ return null;
+}
+function aiFeedbackShow(ok){
+ var s=aiStats();
+ s.todayTotal++;s.allTime++;
+ if(ok===true){s.todayCorrect++;s.streak++;if(s.streak>s.bestStreak)s.bestStreak=s.streak;}
+ else if(ok===false){s.streak=0;}
+ aiStatsSave(s);
+ var el=document.getElementById('aiFeedback');if(!el)return ok;
+ var main='',cls='';
+ var mile=null;AI_MILES.forEach(function(m){if(s.todayTotal===m[0])mile=m[1];});
+ if(mile){main=mile.replace('{days}',aiDays());cls='gold';}
+ else if(ok===true&&(s.streak===3||s.streak===5||s.streak===8||(s.streak>=10&&s.streak%5===0))){
+  var t=s.streak===3?AI_STREAKS[0]:s.streak===5?AI_STREAKS[1]:s.streak===8?AI_STREAKS[2]:AI_STREAKS[3];
+  main=t.replace('{streak}',s.streak);cls='gold';
+ }else if(ok===true){main=aiPick(AI_PRAISE_OK);cls='ok';}
+ else if(ok===false){main=aiPick(AI_PRAISE_NO);cls='no';}
+ else{el.classList.remove('show');return ok;}
+ el.className='ai-feedback show '+cls;
+ el.innerHTML='<span class="ai-fb-main">'+esc(main)+'</span><span class="ai-fb-stat">今日 '+s.todayTotal+' 题 · 连对 '+s.streak+'</span>';
+ return ok;
+}
+var AICK='mti_ai_cache';
+function aiCacheKey(p){var s=aiCfg.model+'|'+p;var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return 'c'+(h>>>0).toString(36)+'_'+(s.length%9973);}
+function aiCacheGet(k){try{var c=JSON.parse(localStorage.getItem(AICK)||'{}');return c[k]?c[k].x:null}catch(e){return null}}
+function aiCachePut(k,x){try{var c=JSON.parse(localStorage.getItem(AICK)||'{}');c[k]={x:x,t:Date.now()};var ks=Object.keys(c);if(ks.length>60){ks.sort(function(a,b){return c[a].t-c[b].t;});ks.slice(0,ks.length-60).forEach(function(d){delete c[d];});}localStorage.setItem(AICK,JSON.stringify(c))}catch(e){try{localStorage.removeItem(AICK)}catch(e2){}}}
+
 
 var aiMode='trans';var aiItem=null;var aiVItem=null;var aiPsg=-1;var aiAbort=null;var aiBusy=false;
 var aiSetupOpen=false;var aiSrcOpen=false;var aiCiSrc='ci';
@@ -401,7 +467,7 @@ function aiStream(userText,target,onDone){
   method:'POST',signal:aiAbort.signal,
   headers:{'content-type':'application/json','authorization':'Bearer '+aiCfg.key},
   body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:2600,
-   messages:[{role:'system',content:AI_SYS},{role:'user',content:userText}]})
+   messages:[{role:'system',content:aiSys()},{role:'user',content:userText}]})
  }).then(function(r){
   if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});
   var rd=r.body.getReader(),dec=new TextDecoder(),buf='',full='';
@@ -465,6 +531,7 @@ function aiView(){
    return '<button class="ai-mode'+(aiMode===m[0]?' on':'')+'" data-m="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div>';
  h+=aiTaskHtml();
  h+='<div class="ai-out" id="aiOut"></div>';
+ h+='<div class="ai-feedback" id="aiFeedback"></div>';
  h+='<div class="ai-mark" id="aiMark"><span>把这题记入记忆系统：</span><button class="yes2" id="aiMarkYes">✓ 会了</button><button class="no2" id="aiMarkNo">✗ 记入错题</button><i id="aiMarkMsg"></i></div>';
  h+='<div class="ai-foot" id="aiFoot"></div></div>';
  return h;
@@ -520,19 +587,19 @@ function aiPrompt(userText){
  if(aiMode==='trans'){
   var p=PSG[aiPsg];
   return '请以 MTI 357 阅卷人视角批改下面这段真题翻译。\n【题源】'+p.s+' '+p.y+' '+p.d+'（'+p.g+'）\n【原文】\n'+p.src+'\n【参考译文】\n'+p.ref+'\n【我的译文】\n'+userText
-   +'\n\n要求：1) 给预估档位（优/良/中/需重练）和主要扣分点；2) 逐句挑出误译、漏译、欠妥表达并给改法，如适用请标注对应翻译技巧名称（增译/减译/词性转换/语序调整/正说反译等）；3) 对照参考译文点出 2-3 处值得借鉴的处理；4) 给一版润色后的完整译文。';
+   +'\n\n'+AI_ADD.trans;
  }
  if(aiMode==='ci'){
   if(aiCiSrc==='vocab'){
    return '211 高频词汇测验。单词：'+aiVItem[0]+'（标准释义：'+aiVItem[1]+'）。我的作答：'+(userText||'（空白，我不会）')
-    +'。请：1) 判定得分/不得分（词性+核心义都对才得分）；2) 给词根/词缀或联想记忆钩子；3) 给 2 个易混近义词并一句话辨析；4) 给 1 个考研阅读风格的例句。';
+    +'\n\n'+AI_ADD.vocab+'\n\n'+AI_RULES;
   }
   return '357 词条互译判分。词条：'+aiItem.q+'（标准答案：'+aiItem.a+(aiItem.m?'；助记：'+aiItem.m:'')+'）。我的作答：'+(userText||'（空白，我不会）')
-   +'。请：1) 判定得分/不得分（考试标准，拼写大小写从严）；2) 指出问题；3) 给一个词根或联想记忆钩子；4) 顺带补充 1-2 个同主题高频词条及译法。';
+   +'\n\n'+AI_ADD.ci+'\n\n'+AI_RULES;
  }
  if(aiMode==='ms'){
   return '448 名词解释批改。词条：'+aiItem.q+'。参考答案要点：'+aiItem.a+(aiItem.m?'；采分点：'+aiItem.m:'')+'。我的作答：\n'+(userText||'（空白）')
-   +'\n请：1) 按「定义/背景/意义」三段逐项对照采分点给分（满分10）；2) 指出缺哪几个采分点；3) 给一版 150-200 字可直接背诵的标准答案。';
+   +'\n\n'+AI_ADD.ms+'\n\n'+AI_RULES;
  }
  if(aiMode==='write'){
   var req=aiWReq||'未提供';
@@ -544,18 +611,18 @@ function aiPrompt(userText){
     extra='\n【站内母题参考】主题：'+E.theme+'；审题示例：'+String(E.exam||'').slice(0,200)+'；核心观点：'+String(E.view||'').slice(0,300)+(qs?'；可用金句：'+qs:'');
    }
    return '448 命题/材料作文批改（满分60，1000-1200字标准）。题目/要求：'+req+extra+'\n【我的作文】\n'+userText
-    +'\n请：1) 按审题立意/结构谋篇/论证材料/语言文采四维打分并给总分；2) 指出立意或结构的最大问题；3) 给升格建议（可直接替换的段落写法/论据/金句）；4) 给一版高分提纲。';
+    +'\n\n'+AI_ADD.write448essay;
   }
   if(aiWType==='essay211'){
    return 'MTI 211 英语作文批改（400 词标准，满分30）。题目/要求：'+req+'\n【我的作文】\n'+userText
-    +'\n请：1) 按内容切题/结构衔接/语法准确/词汇多样打分并给总分；2) 逐句挑出语法错误并给改法；3) 给 5 组可替换的高级表达（原表达→升级表达）；4) 给一版高分结构骨架（英文）。';
+    +'\n\n'+AI_ADD.write211;
   }
   var kw={speech:'演讲',letter:'信函',ad:'广告',notice:'通知',manual:'说明书',report:'报告'}[aiWType]||'';
   var tips=WTIPS.filter(function(t){return t[0].indexOf(kw)>=0;}).map(function(t){return t[0]+'：'+t[1];}).join('\n');
   return '448 应用文批改（满分40）。文体：'+aiWTypeLabel()+'。题目/要求：'+req
    +'\n【站内考纲要点】\n'+WTIPS[0][0]+'：'+WTIPS[0][1]+(tips?'\n'+tips:'')
    +'\n【我的作文】\n'+userText
-   +'\n请：1) 按格式与要素（称谓/落款/日期等）/语体得当/内容切题/语言规范四维打分并给总分；2) 逐项指出问题与改法；3) 最后给该文体一版可背诵的满分框架模板。';
+   +'\n\n'+AI_ADD.write448;
  }
  return userText;
 }
@@ -600,6 +667,7 @@ function bindAI(){
   if(!aiItem||!aiItem.key)return;
   grade(aiItem.key,ok);
   var msg=$('aiMarkMsg');if(msg)msg.textContent=ok?'已记入 ✓ 复习排期已升级':'已记入错题本，10 分钟后重现';
+  var fb=document.getElementById('aiFeedback');if(fb&&fb.classList.contains('show'))fb.classList.add('done');
   if(my)my.disabled=true;if(mn)mn.disabled=true;
   setTimeout(function(){
    if(cur!=='ai')return;
@@ -609,24 +677,54 @@ function bindAI(){
  }
  if(my)my.addEventListener('click',function(){aiMark(true);});
  if(mn)mn.addEventListener('click',function(){aiMark(false);});
- var _sd=$('aiSend');if(_sd)_sd.addEventListener('click',function(){
+ function aiShowMark(verdict){
+  if(!(aiItem&&aiItem.key&&(aiMode==='ms'||(aiMode==='ci'&&aiCiSrc==='ci'))))return;
+  var mk=document.getElementById('aiMark');if(!mk)return;
+  mk.classList.add('show');
+  var y=document.getElementById('aiMarkYes'),n=document.getElementById('aiMarkNo');
+  if(y)y.classList.toggle('suggest',verdict===true);
+  if(n)n.classList.toggle('suggest',verdict===false);
+ }
+ function aiDoSend(force){
   if(aiBusy)return;
   if(!aiOk()){aiSetupOpen=true;aiRefresh();var s=document.getElementById('aiStatus');if(s){s.className='ai-status err';s.textContent='✗ 先填入网关 Key 并测试连接。';}window.scrollTo(0,0);return;}
-  var txt=$('aiInput').value.trim();
+  var inp=document.getElementById('aiInput');
+  var txt=inp?inp.value.trim():'';
   if(aiMode!=='ci'&&!txt)return;
-  var mk=$('aiMark');if(mk){mk.classList.remove('show');var mg=$('aiMarkMsg');if(mg)mg.textContent='';if(my)my.disabled=false;if(mn)mn.disabled=false;}
+  var mk=$('aiMark');if(mk){mk.classList.remove('show');var mg=$('aiMarkMsg');if(mg)mg.textContent='';
+   var y=document.getElementById('aiMarkYes'),n=document.getElementById('aiMarkNo');
+   if(y){y.disabled=false;y.classList.remove('suggest');}if(n){n.disabled=false;n.classList.remove('suggest');}}
+  var fb=document.getElementById('aiFeedback');if(fb)fb.classList.remove('done');
+  var prompt=aiPrompt(txt);
+  var ck=aiCacheKey(prompt);
+  var f=document.getElementById('aiFoot');
+  if(!force){
+   var hit=aiCacheGet(ck);
+   if(hit){
+    aiPaint('aiOut',aiMd(hit));
+    var v0=aiVerdictOf(hit);
+    aiShowMark(v0);
+    if(f){f.classList.add('show');f.innerHTML='⚡ 同一作答已判过，这是本地缓存结果（未消耗额度）· <button class="ai-pick" id="aiReask">重新判分</button>';
+     var rb=document.getElementById('aiReask');if(rb)rb.addEventListener('click',function(){aiDoSend(true);});}
+    return;
+   }
+  }
   $('aiStop').classList.add('show');
   $('aiSend').disabled=true;
-  aiStream(aiPrompt(txt),'aiOut',function(text,ms){
+  aiStream(prompt,'aiOut',function(text,ms){
    var stop=document.getElementById('aiStop');if(stop)stop.classList.remove('show');
    var send=document.getElementById('aiSend');if(send)send.disabled=false;
-   var f=document.getElementById('aiFoot');
-   if(text&&f){f.classList.add('show');f.textContent='模型 '+aiCfg.model+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
-   if(text&&aiItem&&aiItem.key&&(aiMode==='ms'||(aiMode==='ci'&&aiCiSrc==='ci'))){
-    var mk2=document.getElementById('aiMark');if(mk2)mk2.classList.add('show');
+   var f2=document.getElementById('aiFoot');
+   if(text){
+    aiCachePut(ck,text);
+    var v=aiVerdictOf(text);
+    aiFeedbackShow(v);
+    aiShowMark(v);
+    if(f2){f2.classList.add('show');f2.textContent='模型 '+aiCfg.model+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
    }
   });
- });
+ }
+ var _sd=$('aiSend');if(_sd)_sd.addEventListener('click',function(){aiDoSend(false);});
  var _sp=$('aiStop');if(_sp)_sp.addEventListener('click',function(){if(aiAbort)aiAbort.abort();});
 }
 
