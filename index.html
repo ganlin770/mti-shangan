@@ -168,7 +168,15 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-task-meta{font-size:11.5px;color:var(--mut);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .ai-pick{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;color:var(--ink);cursor:pointer}
 .ai-pick:hover{border-color:var(--green)}
-.ai-src{font-size:13.5px;line-height:1.9;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;max-height:180px;overflow-y:auto;white-space:pre-wrap}
+.ai-src{font-size:13.5px;line-height:1.9;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;max-height:150px;overflow:hidden;position:relative;white-space:pre-wrap}
+.ai-src::after{content:"";position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(180deg,rgba(243,239,230,0),var(--paper) 90%);pointer-events:none}
+.ai-src.open{max-height:none;overflow:visible}
+.ai-src.open::after{display:none}
+.ai-src-bar{display:flex;justify-content:flex-end;margin-top:7px}
+.ai-setup--slim{display:flex;align-items:center;gap:10px;padding:11px 15px;font-size:12.5px;color:var(--mut)}
+.ai-setup--slim b{color:var(--ink)}
+.ai-setup--slim .ai-slim-dot{width:8px;height:8px;border-radius:50%;background:#3d7a4e;box-shadow:0 0 0 3px rgba(61,122,78,.14);flex:none}
+.ai-setup--slim .ai-pick{margin-left:auto}
 .ai-input-row{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .ai-input-row textarea{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:14px;line-height:1.8;color:var(--ink);resize:vertical;min-height:88px}
 .ai-input-row textarea:focus{outline:none;border-color:var(--green)}
@@ -344,7 +352,9 @@ var AI_MODELS=[
 ];
 var AI_SYS='你是"南昌大学 MTI 英语口译(055102) 2027 考研"的专属备考助教。考试科目：101政治、211翻译硕士英语、357英语翻译基础、448汉语写作与百科知识；复试重口语与交传复述。回答一律用中文（词条/例句保留英文），考试导向，简洁分点，直接给可背诵、可落笔的表述，不要客套开场白。';
 
-var aiMode='trans';var aiItem=null;var aiPsg=-1;var aiAbort=null;var aiBusy=false;
+var aiMode='trans';var aiItem=null;var aiPsg=-1;var aiAbort=null;var aiBusy=false;var aiSetupOpen=false;var aiSrcOpen=false;
+function aiRefresh(){document.getElementById('view').innerHTML=aiView();bindAI();}
+function aiModelLabel(){for(var i=0;i<AI_MODELS.length;i++)if(AI_MODELS[i][0]===aiCfg.model)return AI_MODELS[i][1];return aiCfg.model;}
 
 function aiSave(){localStorage.setItem(AIK,JSON.stringify(aiCfg));}
 function aiOk(){return !!(aiCfg.key&&aiCfg.url);}
@@ -417,13 +427,17 @@ function aiView(){
  if(aiPsg<0)aiPsg=aiDefaultPsg();
  if(!aiItem||((aiMode==='ci')!==(aiItem.type==='词条')))aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
  var h='<div class="ai-wrap">';
+ if(aiOk()&&!aiSetupOpen){
+  h+='<div class="ai-setup ai-setup--slim"><span class="ai-slim-dot"></span><span>已连接自建网关</span><b>'+esc(aiModelLabel())+'</b><button class="ai-pick" id="aiCfgEdit">修改设置</button></div>';
+ }else{
  h+='<div class="ai-setup"><div class="pl">连接设置 · 自建 CLAUDE 网关</div><div class="ai-setup-grid">'
   +'<input id="aiUrl" placeholder="网关地址 https://…" value="'+esc(aiCfg.url)+'">'
   +'<input id="aiKey" type="password" placeholder="API Key（只存本机浏览器）" value="'+esc(aiCfg.key||'')+'">'
   +'<select id="aiModel">'+AI_MODELS.map(function(m){return '<option value="'+m[0]+'"'+(aiCfg.model===m[0]?' selected':'')+'>'+m[1]+'</option>';}).join('')+'</select>'
   +'<button class="ai-test" id="aiTest">测试连接</button></div>'
   +'<div class="ai-status" id="aiStatus"></div>'
-  +'<div class="ai-hint">Key 仅保存在<b>本机浏览器</b>，不会出现在网页源码或仓库里。建议在网关控制台为本站单独创建一把 Key（可独立统计、随时吊销）。批改类任务建议用 <b>Opus</b>，快问快答用 <b>Haiku</b>。</div></div>';
+  +'<div class="ai-hint">Key 仅保存在<b>本机浏览器</b>，不会出现在网页源码或仓库里。建议在网关控制台为本站单独创建一把 Key（可独立统计、随时吊销）。批改类任务建议用 <b>Opus</b>，快问快答用 <b>Haiku</b>。'+(aiOk()?' <button class="ai-pick" id="aiCfgClose" style="margin-left:6px">收起 ▲</button>':'')+'</div></div>';
+ }
  h+='<div class="ai-modes">'+[['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['free','💬 自由问答']].map(function(m){
    return '<button class="ai-mode'+(aiMode===m[0]?' on':'')+'" data-m="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div>';
  h+=aiTaskHtml();
@@ -438,7 +452,8 @@ function aiTaskHtml(){
   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">真题段落</span>'
    +'<select class="ai-pick" id="aiPsgSel">'+PSG.map(function(x,i){return '<option value="'+i+'"'+(i===aiPsg?' selected':'')+'>'+esc(aiPsgLabel(x,i))+'</option>';}).join('')+'</select>'
    +'<button class="ai-pick" id="aiPsgRand">🎲 随机换一条</button></div>'
-   +'<div class="ai-src">'+esc(p.src)+'</div>'
+   +'<div class="ai-src'+(aiSrcOpen?' open':'')+'" id="aiSrc">'+esc(p.src)+'</div>'
+   +'<div class="ai-src-bar"><button class="ai-pick" id="aiSrcT">'+(aiSrcOpen?'收起原文 ▲':'展开全文 ▼')+'</button></div>'
    +'<div class="ai-input-row"><textarea id="aiInput" rows="6" placeholder="把你的译文写在这里（'+(p.d==='英译汉'?'写中文':'写英文')+'），AI 按 357 阅卷标准批改并对照参考译文。"></textarea>'
    +'<div class="ai-actions"><button class="ai-send" id="aiSend">批改我的译文</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
  }else if(aiMode==='ci'){
@@ -478,25 +493,28 @@ function aiPrompt(userText){
 
 function bindAI(){
  var $=function(id){return document.getElementById(id);};
- $('aiUrl').addEventListener('change',function(){aiCfg.url=this.value.trim();aiSave();});
- $('aiKey').addEventListener('change',function(){aiCfg.key=this.value.trim();aiSave();});
- $('aiModel').addEventListener('change',function(){aiCfg.model=this.value;aiSave();});
- $('aiTest').addEventListener('click',function(){
+ var _u=$('aiUrl');if(_u)_u.addEventListener('change',function(){aiCfg.url=this.value.trim();aiSave();});
+ var _k=$('aiKey');if(_k)_k.addEventListener('change',function(){aiCfg.key=this.value.trim();aiSave();});
+ var _mo=$('aiModel');if(_mo)_mo.addEventListener('change',function(){aiCfg.model=this.value;aiSave();});
+ var _t=$('aiTest');if(_t)_t.addEventListener('click',function(){
   aiCfg.url=$('aiUrl').value.trim();aiCfg.key=$('aiKey').value.trim();aiSave();
   var s=$('aiStatus');s.className='ai-status';s.textContent='测试中…';
   fetch(aiBase()+'/v1/models',{headers:{authorization:'Bearer '+aiCfg.key}}).then(function(r){
    if(!r.ok)throw new Error('HTTP '+r.status);return r.json();
-  }).then(function(d){var n=(d.data||d.models||[]).length;s.className='ai-status ok';s.textContent='✓ 已连通，网关开放 '+n+' 个模型，Key 有效。';})
+  }).then(function(d){var n=(d.data||d.models||[]).length;s.className='ai-status ok';s.textContent='✓ 已连通，网关开放 '+n+' 个模型，Key 有效。';setTimeout(function(){if(cur==='ai'&&aiOk()){aiSetupOpen=false;aiRefresh();}},900);})
   .catch(function(e){s.className='ai-status err';s.textContent='✗ 连接失败：'+e.message+'（检查地址 / Key）';});
  });
+ var ce=$('aiCfgEdit');if(ce)ce.addEventListener('click',function(){aiSetupOpen=true;aiRefresh();});
+ var cc=$('aiCfgClose');if(cc)cc.addEventListener('click',function(){aiSetupOpen=false;aiRefresh();});
+ var srct=$('aiSrcT');if(srct)srct.addEventListener('click',function(){aiSrcOpen=!aiSrcOpen;var s=$('aiSrc');if(s)s.classList.toggle('open',aiSrcOpen);this.textContent=aiSrcOpen?'收起原文 ▲':'展开全文 ▼';});
  document.querySelectorAll('.ai-mode').forEach(function(b){b.addEventListener('click',function(){
   aiMode=this.getAttribute('data-m');aiItem=null;
-  document.getElementById('view').innerHTML=aiView();bindAI();
+  aiRefresh();
  });});
- var sel=$('aiPsgSel');if(sel)sel.addEventListener('change',function(){aiPsg=+this.value;document.getElementById('view').innerHTML=aiView();bindAI();});
- var rnd=$('aiPsgRand');if(rnd)rnd.addEventListener('click',function(){aiPsg=Math.floor(Math.random()*PSG.length);document.getElementById('view').innerHTML=aiView();bindAI();});
- var nxt=$('aiNext');if(nxt)nxt.addEventListener('click',function(){aiItem=aiDraw(aiMode==='ms'?'名解':'词条');document.getElementById('view').innerHTML=aiView();bindAI();});
- $('aiSend').addEventListener('click',function(){
+ var sel=$('aiPsgSel');if(sel)sel.addEventListener('change',function(){aiPsg=+this.value;aiSrcOpen=false;aiRefresh();});
+ var rnd=$('aiPsgRand');if(rnd)rnd.addEventListener('click',function(){aiPsg=Math.floor(Math.random()*PSG.length);aiSrcOpen=false;aiRefresh();});
+ var nxt=$('aiNext');if(nxt)nxt.addEventListener('click',function(){aiItem=aiDraw(aiMode==='ms'?'名解':'词条');aiRefresh();});
+ var _sd=$('aiSend');if(_sd)_sd.addEventListener('click',function(){
   if(aiBusy)return;
   if(!aiOk()){var s=$('aiStatus');s.className='ai-status err';s.textContent='✗ 先在上方填入网关 Key 并保存。';window.scrollTo(0,0);return;}
   var txt=$('aiInput').value.trim();
@@ -510,12 +528,12 @@ function bindAI(){
    if(text&&f){f.classList.add('show');f.textContent='模型 '+aiCfg.model+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
   });
  });
- $('aiStop').addEventListener('click',function(){if(aiAbort)aiAbort.abort();});
+ var _sp=$('aiStop');if(_sp)_sp.addEventListener('click',function(){if(aiAbort)aiAbort.abort();});
 }
 
 /* ---- 注册导航（运行时注入，不改原数据行）---- */
-NAVG[3][1].push('ai');
-NAV.push(['ai','AI 助教']);
+NAVG[0][1].push('ai');
+NAV.splice(1,0,['ai','AI 助教']);
 MLB.ai='AI';
 IC.ai='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 4v3M9 15h6"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/></svg>';
 
