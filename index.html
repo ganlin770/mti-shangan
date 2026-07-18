@@ -283,6 +283,20 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 
 @media(max-width:760px){.ai-setup-grid{grid-template-columns:1fr 1fr}.ai-wrap{max-width:none}}
 
+/* ---- AI 页「今日特训」 ---- */
+.ai-td .ai-td-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ai-td .ai-td-hb{display:flex;flex-direction:column;gap:2px;flex:1;min-width:200px}
+.ai-td .ai-td-hb b{font-size:15px;color:var(--green2)}
+.ai-td .ai-td-hb small{color:var(--mut);font-size:12px}
+.ai-td-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.ai-td-chip{font-size:12.5px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.55);cursor:help}
+.ai-td-chip.ok{opacity:.5;text-decoration:line-through}
+.ai-td-aux{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0;color:var(--mut);font-size:12.5px}
+.ai-td-auxtip{margin-left:auto;font-size:11.5px;color:var(--mut);opacity:.75}
+.ai-chain-bar{display:flex;align-items:center;gap:10px;padding:7px 12px;margin-bottom:10px;border:1px dashed var(--green);border-radius:10px;background:rgba(46,74,56,.05);font-size:12.5px;color:var(--green2)}
+.ai-chain-bar span{flex:1}
+@media(max-width:760px){.ai-td .ai-td-head{flex-direction:column;align-items:stretch}.ai-td-auxtip{margin-left:0;width:100%}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="apple-touch-icon" href="icon-180.png"><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="MTI上岸"><meta name="theme-color" content="#2e4a38"><meta name="mobile-web-app-capable" content="yes">
@@ -664,7 +678,7 @@ function aiView(){
   +'<div class="ai-status" id="aiStatus"></div>'
   +'<div class="ai-hint">Key 仅保存在<b>本机浏览器</b>，不会出现在网页源码或仓库里。建议在网关控制台为本站单独创建一把 Key（可独立统计、随时吊销）。批改类任务建议用 <b>Opus</b>，快问快答用 <b>Haiku</b>。'+(aiOk()?' <button class="ai-pick" id="aiCfgClose" style="margin-left:6px">收起 ▲</button>':'')+'</div></div>';
  }
- h+='<div class="ai-modes">'+[['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['write','✍️ 写作批改'],['free','💬 自由问答']].map(function(m){
+ h+='<div class="ai-modes">'+[['today','📅 今日特训'],['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['write','✍️ 写作批改'],['free','💬 自由问答']].map(function(m){
    return '<button class="ai-mode'+(aiMode===m[0]?' on':'')+'" data-m="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div>';
  h+=aiTaskHtml();
  h+='<div class="ai-answer" id="aiAnswer"></div>';
@@ -676,7 +690,8 @@ function aiView(){
 }
 
 function aiTaskHtml(){
- var h='<div class="ai-task">';
+ if(aiMode==='today')return aiTdPanelHtml();
+ var h='<div class="ai-task">'+aiChainBarHtml();
  if(aiMode==='trans'){
   var p=PSG[aiPsg];
   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">真题段落</span>'
@@ -783,7 +798,7 @@ function bindAI(){
  var srct=$('aiSrcT');if(srct)srct.addEventListener('click',function(){aiSrcOpen=!aiSrcOpen;var s=$('aiSrc');if(s)s.classList.toggle('open',aiSrcOpen);this.textContent=aiSrcOpen?'收起原文 ▲':'展开全文 ▼';});
  document.querySelectorAll('.ai-mode').forEach(function(b){b.addEventListener('click',function(){
   if(aiBusy&&aiAbort)aiAbort.abort();
-  aiMode=this.getAttribute('data-m');aiItem=null;
+  aiMode=this.getAttribute('data-m');aiItem=null;aiChain=false;
   aiRefresh();
  });});
  document.querySelectorAll('[data-cisrc]').forEach(function(b){b.addEventListener('click',function(){
@@ -868,6 +883,7 @@ function bindAI(){
  }
  var _sd=$('aiSend');if(_sd)_sd.addEventListener('click',function(){aiDoSend(false);});
  var _sp=$('aiStop');if(_sp)_sp.addEventListener('click',function(){if(aiAbort)aiAbort.abort();});
+ bindAiTd($);
 }
 
 /* ---- 错题本行内 AI 讲解 ---- */
@@ -1041,21 +1057,103 @@ function tdStartDrill(){tdEnsure();tdSession={task:'drill'};aiMode='ci';aiCiSrc=
 function tdOnJudged(v,text){
  tdEnsure();var D=st.daily;
  if(aiMode==='trans'&&text&&+aiPsg===+D.psg){
-  if(!D.done.trans){D.done.trans=1;save();}
+  if(!D.done.trans){D.done.trans=1;save();tdChainAdvance();}
  }else if(aiMode==='write'&&text){
-  if(!D.done.write){D.done.write=1;save();}
+  if(!D.done.write){D.done.write=1;save();tdChainAdvance();}
  }else if(aiMode==='ci'&&aiCiSrc==='vocab'&&D.vQueue.length&&aiVItem===VOCAB[D.vQueue[0]]&&v!==null){
   var w=VOCAB[D.vQueue[0]][0];
   if(v){D.vQueue.shift();D.vDone++;grade('v|'+w,true);}
   else{D.vQueue.push(D.vQueue.shift());grade('v|'+w,false);}
-  if(!D.vQueue.length){D.done.vocab=1;save();tdSession=null;}
+  if(!D.vQueue.length){D.done.vocab=1;save();tdSession=null;tdChainAdvance();}
   else setTimeout(function(){
    if(cur==='ai'&&aiMode==='ci'&&aiCiSrc==='vocab'&&st.daily.vQueue.length){
     aiVItem=VOCAB[st.daily.vQueue[0]];aiRefresh();
    }},1500);
  }else if(aiMode==='ci'&&aiCiSrc==='ci'&&v!==null&&D.drillCnt<D.drillGoal){
-  D.drillCnt++;if(D.drillCnt>=D.drillGoal)D.done.drill=1;save();
+  D.drillCnt++;if(D.drillCnt>=D.drillGoal){D.done.drill=1;tdChainAdvance();}save();
  }
+}
+/* ==== AI 页「今日特训」：今日学习包 × AI 批改一站式 ==== */
+var aiChain=false;
+function tdNextTask(){
+ var D=st.daily;if(!D)return null;
+ if(!D.done.vocab)return 'vocab';
+ if(!D.done.drill)return 'drill';
+ if(!D.done.trans)return 'trans';
+ if(!D.done.write)return 'write';
+ return null;
+}
+function tdChainGo(t){
+ var D=st.daily;
+ if(t==='vocab'&&D.vQueue.length){tdSession={task:'vocab'};aiMode='ci';aiCiSrc='vocab';aiVItem=VOCAB[D.vQueue[0]];}
+ else if(t==='drill'){tdSession={task:'drill'};aiMode='ci';aiCiSrc='ci';aiItem=aiDraw('词条');}
+ else if(t==='trans'){tdSession={task:'trans'};aiMode='trans';aiPsg=D.psg;aiSrcOpen=false;}
+ else if(t==='write'){tdSession={task:'write'};aiMode='write';aiWType=D.wType;aiWTheme=D.wTheme;aiWReq=D.wReq;}
+ else{aiMode='today';}
+ if(cur==='ai')aiRefresh();else go('ai');
+}
+function tdChainAdvance(){
+ if(!aiChain)return;
+ var nx=tdNextTask();
+ setTimeout(function(){
+  if(cur!=='ai'||!aiChain)return;
+  if(nx){tdChainGo(nx);}
+  else{aiChain=false;aiMode='today';aiRefresh();if(!aiBusy)tdSummary();}
+ },1600);
+}
+function aiChainBarHtml(){
+ if(!aiChain)return '';
+ var lb={vocab:'今日词汇',drill:'词条加练',trans:'真题翻译',write:'今日写作'};
+ var t=tdSession&&tdSession.task&&lb[tdSession.task]?lb[tdSession.task]:'';
+ return '<div class="ai-chain-bar"><span>⛓ 连练模式'+(t?' · 当前：'+t:'')+' · 完成本项自动进入下一项</span><button type="button" class="ai-pick" id="aiChainStop">退出连练</button></div>';
+}
+function aiTdPanelHtml(){
+ tdEnsure();
+ var D=st.daily;var dow=new Date().getDay();var dowN=['日','一','二','三','四','五','六'];
+ var p=PSG[D.psg];
+ var over=typeStats('词条').over+typeStats('名解').over;
+ var four=(D.done.vocab?1:0)+(D.done.drill?1:0)+(D.done.trans?1:0)+(D.done.write?1:0);
+ var remain={};D.vQueue.forEach(function(i){remain[i]=1;});
+ var chips=D.vList.map(function(i){var w=VOCAB[i];return '<span class="ai-td-chip'+(remain[i]?'':' ok')+'" title="'+esc(w[1])+'">'+esc(w[0])+'</span>';}).join('');
+ var h='<div class="ai-task ai-td">';
+ h+='<div class="ai-td-head"><div class="ai-td-hb"><b>📅 '+esc(D.date)+' · 周'+dowN[dow]+' 特训</b><small>距初试 '+aiDays()+' 天 · AI 必练四项已完成 '+four+'/4'+(four===4?' · 全清 🎉':'')+'</small></div>'
+  +(four<4?'<button class="ai-send" id="aiTdChain">▶ 一键连练四项</button>':'')+'</div>';
+ h+='<div class="td-list">';
+ h+='<div class="td-task'+(D.done.vocab?' ok':'')+'"><span class="td-check">'+(D.done.vocab?'✓':'')+'</span>'
+  +'<div class="td-tb"><b>🔤 今日词汇 10 词</b><small>先扫一遍今日词表（悬停看释义，划线=已过），再去 AI 判分；答错自动排队尾</small>'
+  +'<div class="ai-td-chips">'+chips+'</div></div>'
+  +'<span class="td-prog">'+D.vDone+'/10</span>'
+  +(D.done.vocab?'':'<button class="td-go" id="aiTdVoc">'+(D.vDone>0?'继续练':'去判分')+'</button>')+'</div>';
+ h+='<div class="td-task'+(D.done.drill?' ok':'')+'"><span class="td-check">'+(D.done.drill?'✓':'')+'</span>'
+  +'<div class="td-tb"><b>🎯 词条 AI 加练 '+D.drillGoal+' 题</b><small>优先抽错题与到期卡 · 判分自动回写艾宾浩斯曲线</small></div>'
+  +'<span class="td-prog">'+D.drillCnt+'/'+D.drillGoal+'</span>'
+  +(D.done.drill?'':'<button class="td-go" id="aiTdDr">去加练</button>')+'</div>';
+ h+='<div class="td-task'+(D.done.trans?' ok':'')+'"><span class="td-check">'+(D.done.trans?'✓':'')+'</span>'
+  +'<div class="td-tb"><b>📝 真题翻译 1 段</b><small>'+esc(p.s+' '+p.y+' · '+p.d+' · '+p.g)+' · 批改完成自动打勾</small></div>'
+  +(D.done.trans?'':'<button class="td-go" id="aiTdTr">去翻译</button>')+'</div>';
+ h+='<div class="td-task'+(D.done.write?' ok':'')+'"><span class="td-check">'+(D.done.write?'✓':'')+'</span>'
+  +'<div class="td-tb"><b>✍️ 写作 · '+esc(D.wLabel)+'</b><small>'+esc(D.wReq||'按周轮换文体')+'</small></div>'
+  +(D.done.write?'':'<button class="td-go" id="aiTdWr">去写作</button>')+'</div>';
+ h+='</div>';
+ h+='<div class="ai-td-aux"><span>抽背任务：</span>'
+  +'<button type="button" class="ai-pick" id="aiTdRev">📥 复习清零 '+(D.done.rev?'✓':'剩 '+over+' 张')+'</button>'
+  +'<button type="button" class="ai-pick" id="aiTdNeu">🆕 新学 '+D.newCnt+'/'+D.newGoal+(D.done.neu?' ✓':'')+'</button>'
+  +'<span class="ai-td-auxtip">听说打卡与一句话复盘在「今日学习」页</span></div>';
+ h+='<div class="td-sumbox"><button class="ai-send" id="tdBtnSum"'+(aiBusy?' disabled':'')+'>'+(four===4?'🌙 AI 复盘今天':'AI 复盘今天（未全清也可）')+'</button><div class="ai-out" id="tdSum"'+(D.sum?' style="display:block"':'')+'>'+(D.sum?aiMd(D.sum):'')+'</div></div>';
+ h+='</div>';
+ return h;
+}
+function bindAiTd($){
+ var b;
+ b=$('aiChainStop');if(b)b.addEventListener('click',function(){aiChain=false;aiRefresh();});
+ b=$('aiTdChain');if(b)b.addEventListener('click',function(){tdEnsure();var nx=tdNextTask();if(!nx)return;aiChain=true;tdChainGo(nx);});
+ b=$('aiTdVoc');if(b)b.addEventListener('click',function(){tdEnsure();tdChainGo('vocab');});
+ b=$('aiTdDr');if(b)b.addEventListener('click',function(){tdEnsure();tdChainGo('drill');});
+ b=$('aiTdTr');if(b)b.addEventListener('click',function(){tdEnsure();tdChainGo('trans');});
+ b=$('aiTdWr');if(b)b.addEventListener('click',function(){tdEnsure();tdChainGo('write');});
+ b=$('aiTdRev');if(b)b.addEventListener('click',function(){openQuiz();});
+ b=$('aiTdNeu');if(b)b.addEventListener('click',function(){openQuiz('词条');});
+ b=$('tdBtnSum');if(b)b.addEventListener('click',tdSummary);
 }
 function tdForecast(){
  var t0=new Date();t0.setHours(0,0,0,0);var s=t0.getTime();
