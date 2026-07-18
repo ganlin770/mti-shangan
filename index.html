@@ -84,6 +84,7 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .row .rt{font-family:"Noto Serif SC",serif;font-size:16px;font-weight:700}
 .row .ra{max-height:0;overflow:hidden;transition:max-height .3s;color:var(--mut);font-size:13.5px;line-height:1.7}
 .row.show .ra{max-height:240px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+.row.show .ra.ai-open{max-height:none}
 .subj{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:0 13px 13px 0;padding:15px 18px;margin-bottom:10px}
 .subj .h{display:flex;justify-content:space-between;align-items:baseline}
 .subj .nm{font-family:"Noto Serif SC",serif;font-size:16px;font-weight:700}
@@ -907,6 +908,7 @@ function aiDecorateMist(){
     p.querySelector('.ai-panel-x').addEventListener('click',function(ev){
      ev.stopPropagation();
      p.classList.remove('show');
+     ra.classList.remove('ai-open');
      if(aiBusy&&aiAbort){try{aiAbort.abort();}catch(e){}}
      var bb=p.querySelector('.ai-panel-body');if(bb){bb.innerHTML='';bb.classList.remove('show');}
     });
@@ -915,6 +917,7 @@ function aiDecorateMist(){
    var pb=p.querySelector('.ai-panel-body');
    pb.innerHTML='';
    p.classList.add('show');
+   ra.classList.add('ai-open');
    aiStream(aiCardPrompt(x),pb);
   });
  });
