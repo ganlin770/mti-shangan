@@ -301,6 +301,10 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-td-auxtip{margin-left:auto;font-size:11.5px;color:var(--mut);opacity:.75}
 .ai-chain-bar{display:flex;align-items:center;gap:10px;padding:7px 12px;margin-bottom:10px;border:1px dashed var(--green);border-radius:10px;background:rgba(46,74,56,.05);font-size:12.5px;color:var(--green2)}
 .ai-chain-bar span{flex:1}
+.ai-next-bar{display:none}
+.ai-next-bar.show{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.ai-nb-tip{font-size:12px;color:var(--mut)}
+.ai-nb-done{font-size:13.5px;color:var(--green2);font-weight:700}
 @media(max-width:760px){.ai-td .ai-td-head{flex-direction:column;align-items:stretch}.ai-td-auxtip{margin-left:0;width:100%}}
 
 </style>
@@ -719,6 +723,7 @@ function aiView(){
  h+='<div class="ai-out" id="aiOut"></div>';
  h+='<div class="ai-feedback" id="aiFeedback"></div>';
  h+='<div class="ai-mark" id="aiMark"><span>把这题记入记忆系统：</span><button class="yes2" id="aiMarkYes">✓ 会了</button><button class="no2" id="aiMarkNo">✗ 记入错题</button><i id="aiMarkMsg"></i></div>';
+ h+='<div class="ai-next-bar" id="aiNextBar"></div>';
  h+='<div class="ai-foot" id="aiFoot"></div></div>';
  return h;
 }
@@ -857,11 +862,8 @@ function bindAI(){
   var msg=$('aiMarkMsg');if(msg)msg.textContent=ok?'已记入 ✓ 复习排期已升级':'已记入错题本，10 分钟后重现';
   var fb=document.getElementById('aiFeedback');if(fb&&fb.classList.contains('show'))fb.classList.add('done');
   if(my)my.disabled=true;if(mn)mn.disabled=true;
-  setTimeout(function(){
-   if(cur!=='ai')return;
-   aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
-   aiRefresh();
-  },1300);
+  var nb=document.getElementById('aiNextBar');
+  if(nb&&!nb.classList.contains('show'))aiNextBar('<button type="button" class="ai-send" id="aiNextCard">下一题 →</button><span class="ai-nb-tip">解析看完再走</span>');
  }
  if(my)my.addEventListener('click',function(){aiMark(true);});
  if(mn)mn.addEventListener('click',function(){aiMark(false);});
@@ -1100,11 +1102,10 @@ function tdOnJudged(v,text){
   var w=VOCAB[D.vQueue[0]][0];
   if(v){D.vQueue.shift();D.vDone++;grade('v|'+w,true);}
   else{D.vQueue.push(D.vQueue.shift());grade('v|'+w,false);}
-  if(!D.vQueue.length){D.done.vocab=1;save();tdSession=null;tdChainAdvance();}
-  else setTimeout(function(){
-   if(cur==='ai'&&aiMode==='ci'&&aiCiSrc==='vocab'&&st.daily.vQueue.length){
-    aiVItem=VOCAB[st.daily.vQueue[0]];aiRefresh();
-   }},1500);
+  if(!D.vQueue.length){D.done.vocab=1;save();tdSession=null;
+   if(aiChain)tdChainAdvance();
+   else aiNextBar('<span class="ai-nb-done">🎉 今日 10 词全部过完</span><button type="button" class="ai-send" id="aiBackToday">回特训看进度 →</button>');
+  }else aiNextBar('<button type="button" class="ai-send" id="aiNextWord">下一词 →（还剩 '+D.vQueue.length+' 词）</button><span class="ai-nb-tip">解析看完再走，进度已保存</span>');
  }else if(aiMode==='ci'&&aiCiSrc==='ci'&&v!==null&&D.drillCnt<D.drillGoal){
   D.drillCnt++;if(D.drillCnt>=D.drillGoal){D.done.drill=1;tdChainAdvance();}save();
  }
@@ -1131,12 +1132,24 @@ function tdChainGo(t){
 function tdChainAdvance(){
  if(!aiChain)return;
  var nx=tdNextTask();
- setTimeout(function(){
-  if(cur!=='ai'||!aiChain)return;
-  if(nx){tdChainGo(nx);}
-  else{aiChain=false;aiMode='today';aiRefresh();if(!aiBusy)tdSummary();}
- },1600);
+ var lb={vocab:'今日词汇',drill:'词条加练',trans:'真题翻译',write:'今日写作'};
+ aiNextBar(nx
+  ?'<button type="button" class="ai-send" id="aiNextTask">✓ 本项完成 · 下一项：'+lb[nx]+' →</button><span class="ai-nb-tip">看完这份批改再走</span>'
+  :'<button type="button" class="ai-send" id="aiGoSum">🎉 四项全清 · 去复盘 →</button><span class="ai-nb-tip">复盘会总结今天的错题与明日重点</span>');
 }
+function aiNextBar(html){
+ var el=document.getElementById('aiNextBar');if(!el)return;
+ el.className='ai-next-bar show';el.innerHTML=html;
+}
+document.addEventListener('click',function(ev){
+ var tg=ev.target;if(!tg||!tg.closest)return;
+ if(tg.closest('#aiNextWord')){tdEnsure();var D=st.daily;
+  if(D.vQueue.length){aiVItem=VOCAB[D.vQueue[0]];aiRefresh();}return;}
+ if(tg.closest('#aiNextCard')){aiItem=aiDraw(aiMode==='ms'?'名解':'词条');aiRefresh();return;}
+ if(tg.closest('#aiNextTask')){var nx=tdNextTask();if(nx)tdChainGo(nx);else{aiMode='today';aiRefresh();}return;}
+ if(tg.closest('#aiGoSum')){aiChain=false;aiMode='today';aiRefresh();if(!aiBusy)tdSummary();return;}
+ if(tg.closest('#aiBackToday')){aiMode='today';aiRefresh();return;}
+});
 function aiChainBarHtml(){
  if(!aiChain)return '';
  var lb={vocab:'今日词汇',drill:'词条加练',trans:'真题翻译',write:'今日写作'};
@@ -1248,7 +1261,7 @@ function tdView(){
  h+='<div class="td-list">';
  h+=tdTaskRow('📥','复习清零',over>0?'到期 '+over+' 张（词条+名解），清完自动打勾':'今日到期已全部清零',over>0?'开始抽背':'','tdBtnRev',D.done.rev,'');
  h+=tdTaskRow('🆕','新学词条 '+D.newGoal+' 张','抽背中遇到的新卡自动计入（新卡排在到期卡之后）','去新学','tdBtnNeu',D.done.neu,D.newCnt+'/'+D.newGoal);
- h+=tdTaskRow('🔤','211 词汇 10 词','今日词表固定 · AI 判分自动过队，答错排队尾重来','AI 陪练','tdBtnVoc',D.done.vocab,D.vDone+'/10');
+ h+=tdTaskRow('🔤','211 词汇 10 词','今日词表固定 · 判对出队、答错排队尾，看完解析手动下一词','AI 陪练','tdBtnVoc',D.done.vocab,D.vDone+'/10');
  h+=tdTaskRow('📝','真题翻译 1 段',esc(p.s+' '+p.y+' · '+p.d+' · '+p.g)+' · 批改完成自动打勾','去翻译','tdBtnTr',D.done.trans,'');
  h+=tdTaskRow('✍️','写作 · '+esc(D.wLabel),D.wReq?esc(D.wReq):'按周轮换文体','去写作','tdBtnWr',D.done.write,'');
  h+=tdTaskRow('🎯','词条 AI 加练 '+D.drillGoal+' 题','优先抽错题与到期卡，判分回写记忆曲线','去加练','tdBtnDr',D.done.drill,D.drillCnt+'/'+D.drillGoal);
