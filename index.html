@@ -290,7 +290,12 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-td .ai-td-hb b{font-size:15px;color:var(--green2)}
 .ai-td .ai-td-hb small{color:var(--mut);font-size:12px}
 .ai-td-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
-.ai-td-chip{font-size:12.5px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.55);cursor:help}
+.ai-td-chip{font-size:12.5px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.55);cursor:pointer}
+.ai-td-chip:hover{border-color:var(--green);background:rgba(46,74,56,.06)}
+.ai-spk-g{display:inline-flex;gap:5px;margin-left:8px;vertical-align:2px}
+.ai-spk{font-size:11.5px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.6);cursor:pointer;color:var(--green2);font-family:inherit;line-height:1.5}
+.ai-spk:hover{border-color:var(--green);background:rgba(46,74,56,.06)}
+.ai-spk:active{transform:scale(.96)}
 .ai-td-chip.ok{opacity:.5;text-decoration:line-through}
 .ai-td-aux{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0;color:var(--mut);font-size:12.5px}
 .ai-td-auxtip{margin-left:auto;font-size:11.5px;color:var(--mut);opacity:.75}
@@ -551,15 +556,43 @@ function aiFeedbackShow(ok){
  el.innerHTML='<span class="ai-fb-main">'+esc(main)+'</span><span class="ai-fb-stat">今日 '+s.todayTotal+' 题 · 连对 '+s.streak+'</span>';
  return ok;
 }
+/* ---- 标准发音：有道词典语音接口（免费无Key，type=1英音/2美音），浏览器 TTS 兜底 ---- */
+var aiAudioEl=null;
+function aiSpkOk(t){return /[A-Za-z]{2}/.test(String(t||''));}
+function aiSpeak(t,acc){
+ t=String(t||'').replace(/（[^）]*）|\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();
+ if(!t)return;
+ if(!aiAudioEl)aiAudioEl=new Audio();
+ var a=aiAudioEl;
+ try{a.pause();}catch(e){}
+ a.src='https://dict.youdao.com/dictvoice?type='+(acc==='uk'?1:2)+'&audio='+encodeURIComponent(t);
+ var p=a.play();
+ if(p&&p.catch)p.catch(function(){
+  try{var u=new SpeechSynthesisUtterance(t);u.lang=acc==='uk'?'en-GB':'en-US';
+   speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
+ });
+}
+function aiSpkHtml(t){
+ var s=esc(String(t||'')).replace(/"/g,'&quot;');
+ return '<span class="ai-spk-g"><button type="button" class="ai-spk" data-acc="us" data-say="'+s+'" title="美式发音">🔊 美</button><button type="button" class="ai-spk" data-acc="uk" data-say="'+s+'" title="英式发音">🔊 英</button></span>';
+}
+document.addEventListener('click',function(ev){
+ var tg=ev.target;if(!tg||!tg.closest)return;
+ var b=tg.closest('.ai-spk');
+ if(b){ev.stopPropagation();ev.preventDefault();aiSpeak(b.getAttribute('data-say'),b.getAttribute('data-acc'));return;}
+ var c=tg.closest('.ai-td-chip');
+ if(c)aiSpeak(c.textContent,'us');
+});
+
 /* ---- 标准答案条（判分瞬间先给答案，AI 解释在下方流式输出）---- */
 function aiAnswerHtml(){
  if(aiMode==='ci'&&aiCiSrc==='vocab'&&aiVItem){
-  return '<div class="ai-ans-lb">标准答案</div><div class="ai-ans-q">'+esc(aiVItem[0])+'</div>'
+  return '<div class="ai-ans-lb">标准答案</div><div class="ai-ans-q">'+esc(aiVItem[0])+' '+aiSpkHtml(aiVItem[0])+'</div>'
    +'<div class="ai-ans-a">'+esc(aiVItem[1])+'</div>';
  }
  if(aiMode==='ci'&&aiItem){
   return '<div class="ai-ans-lb">标准答案</div><div class="ai-ans-q">'+esc(aiItem.q)+'</div>'
-   +'<div class="ai-ans-a">'+esc(aiItem.a)+'</div>'
+   +'<div class="ai-ans-a">'+esc(aiItem.a)+(aiSpkOk(aiItem.a)?' '+aiSpkHtml(aiItem.a):'')+'</div>'
    +(aiItem.m?'<div class="ai-ans-m">助记 · '+esc(aiItem.m)+'</div>':'');
  }
  if(aiMode==='ms'&&aiItem){
@@ -707,12 +740,12 @@ function aiTaskHtml(){
    +'<button class="ai-pick'+(aiCiSrc==='vocab'?' on':'')+'" data-cisrc="vocab">211 词汇</button>';
   if(aiCiSrc==='vocab'){
    h+='<div class="ai-task-meta"><span class="pl" style="margin:0">'+(tdSession&&tdSession.task==='vocab'&&st.daily&&st.daily.vQueue.length?'今日词汇 第 '+(st.daily.vDone+1)+'/10 词 · 答错自动排队尾':'词汇陪练 · 2708 词随机抽')+'</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
-    +'<div class="ai-q">请给出中文释义：<b>'+esc(aiVItem[0])+'</b></div>'
+    +'<div class="ai-q">请给出中文释义：<b>'+esc(aiVItem[0])+'</b>'+aiSpkHtml(aiVItem[0])+'</div>'
     +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下词性和中文意思，AI 判分并给词根助记、同近义辨析。"></textarea>'
     +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
   }else{
    h+='<div class="ai-task-meta"><span class="pl" style="margin:0">词条陪练 · 优先抽到期/错题</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
-    +'<div class="ai-q">请给出英译/全称：<b>'+esc(aiItem.q)+'</b></div>'
+    +'<div class="ai-q">请给出英译/全称：<b>'+esc(aiItem.q)+'</b>'+(aiSpkOk(aiItem.q)?aiSpkHtml(aiItem.q):'')+'</div>'
     +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下你的答案，AI 严格判分并给记忆钩子。判分后可一键记入记忆系统。"></textarea>'
     +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
   }
@@ -1123,7 +1156,7 @@ function aiTdPanelHtml(){
   +(four<4?'<button class="ai-send" id="aiTdChain">▶ 一键连练四项</button>':'')+'</div>';
  h+='<div class="td-list">';
  h+='<div class="td-task'+(D.done.vocab?' ok':'')+'"><span class="td-check">'+(D.done.vocab?'✓':'')+'</span>'
-  +'<div class="td-tb"><b>🔤 今日词汇 10 词</b><small>先扫一遍今日词表（悬停看释义，划线=已过），再去 AI 判分；答错自动排队尾</small>'
+  +'<div class="td-tb"><b>🔤 今日词汇 10 词</b><small>先扫一遍今日词表（点击听发音 · 悬停看释义 · 划线=已过），再去 AI 判分；答错自动排队尾</small>'
   +'<div class="ai-td-chips">'+chips+'</div></div>'
   +'<span class="td-prog">'+D.vDone+'/10</span>'
   +(D.done.vocab?'':'<button class="td-go" id="aiTdVoc">'+(D.vDone>0?'继续练':'去判分')+'</button>')+'</div>';
