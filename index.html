@@ -188,6 +188,13 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-stop.show{display:inline-block}
 .ai-out{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;font-size:14.5px;line-height:2;display:none;word-break:break-word}
 .ai-out.show{display:block}
+.ai-answer{display:none;margin-top:-2px;padding:13px 17px;border:1px solid var(--green);border-left:4px solid var(--green);border-radius:12px;background:linear-gradient(180deg,rgba(46,74,56,.075),rgba(46,74,56,.02));word-break:break-word}
+.ai-answer.show{display:block;animation:aifb .18s ease}
+.ai-answer .ai-ans-lb{font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--green);margin-bottom:5px}
+.ai-answer .ai-ans-q{font-size:12.5px;color:var(--mut);line-height:1.7;margin-bottom:3px}
+.ai-answer .ai-ans-a{font-family:"Noto Serif SC",serif;font-weight:700;font-size:19px;line-height:1.75;color:var(--green2);white-space:pre-wrap}
+.ai-answer .ai-ans-a.p{font-size:14.5px;font-weight:400;line-height:1.95;color:var(--ink)}
+.ai-answer .ai-ans-m{font-size:12.5px;color:var(--mut);line-height:1.8;margin-top:7px;border-top:1px dashed var(--line);padding-top:6px}
 .ai-out h4{font-family:"Noto Serif SC",serif;font-size:16px;margin:14px 0 6px;color:var(--green2)}
 .ai-out h4:first-child{margin-top:0}
 .ai-out b{color:var(--green2)}
@@ -198,10 +205,22 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 @keyframes aiblink{50%{opacity:0}}
 .ai-foot{font-size:11px;color:var(--mut);margin-top:10px;display:none}
 .ai-foot.show{display:block}
-.ai-quiz-btn{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:7px 14px;font-family:inherit;font-size:12.5px;cursor:pointer;margin-top:10px}
-.ai-quiz-btn:hover{background:rgba(255,255,255,.22)}
+.ai-quiz-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.34);background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(7px) saturate(1.2);backdrop-filter:blur(7px) saturate(1.2);color:#fff;border-radius:999px;padding:8px 16px 8px 13px;font-family:inherit;font-size:12.5px;letter-spacing:.02em;cursor:pointer;margin-top:10px;box-shadow:0 6px 18px rgba(30,26,16,.20);transition:background .18s,border-color .18s,box-shadow .18s}
+.ai-quiz-btn:hover{background:rgba(255,255,255,.26);border-color:rgba(255,255,255,.55);box-shadow:0 10px 26px rgba(30,26,16,.28)}
+.ai-quiz-btn:active{background:rgba(255,255,255,.32)}
+.ai-quiz-btn svg{flex:none;opacity:.92}
 .ai-quiz-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:10px;font-size:13.5px;line-height:1.9;max-height:300px;overflow-y:auto;display:none;text-align:left;color:var(--ink)}
 .ai-quiz-panel.show{display:block}
+.ai-quiz-panel.framed{padding:0;overflow:hidden;max-height:none;border-radius:14px}
+.ai-quiz-panel.framed.show{display:flex;flex-direction:column}
+.ai-panel-head{flex:none;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(46,74,56,.07),rgba(46,74,56,0))}
+.ai-panel-head svg{flex:none;color:var(--green);opacity:.88}
+.ai-panel-head b{font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--green2)}
+.ai-panel-head .sp{flex:1}
+.ai-panel-x{flex:none;width:26px;height:26px;line-height:1;border:1px solid transparent;background:transparent;color:var(--mut);border-radius:8px;font-family:inherit;font-size:19px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.ai-panel-x:hover{background:rgba(191,81,48,.10);border-color:rgba(191,81,48,.22);color:var(--rust)}
+.ai-panel-body{background:none;border:0;border-radius:0;padding:12px 16px 14px;font-size:13.5px;line-height:1.9;max-height:280px;overflow-y:auto;text-align:left}
+@media (max-height:680px){.ai-panel-body{max-height:190px}}
 
 .ai-pick.on{background:var(--green);border-color:var(--green);color:#f3efe6}
 .ai-mark{display:none;margin-top:-2px;padding:11px 14px;background:var(--card);border:1px dashed var(--line);border-radius:12px;font-size:13px;align-items:center;gap:9px;flex-wrap:wrap}
@@ -517,6 +536,30 @@ function aiFeedbackShow(ok){
  el.innerHTML='<span class="ai-fb-main">'+esc(main)+'</span><span class="ai-fb-stat">今日 '+s.todayTotal+' 题 · 连对 '+s.streak+'</span>';
  return ok;
 }
+/* ---- 标准答案条（判分瞬间先给答案，AI 解释在下方流式输出）---- */
+function aiAnswerHtml(){
+ if(aiMode==='ci'&&aiCiSrc==='vocab'&&aiVItem){
+  return '<div class="ai-ans-lb">标准答案</div><div class="ai-ans-q">'+esc(aiVItem[0])+'</div>'
+   +'<div class="ai-ans-a">'+esc(aiVItem[1])+'</div>';
+ }
+ if(aiMode==='ci'&&aiItem){
+  return '<div class="ai-ans-lb">标准答案</div><div class="ai-ans-q">'+esc(aiItem.q)+'</div>'
+   +'<div class="ai-ans-a">'+esc(aiItem.a)+'</div>'
+   +(aiItem.m?'<div class="ai-ans-m">助记 · '+esc(aiItem.m)+'</div>':'');
+ }
+ if(aiMode==='ms'&&aiItem){
+  return '<div class="ai-ans-lb">参考答案</div><div class="ai-ans-q">'+esc(aiItem.q)+'</div>'
+   +'<div class="ai-ans-a p">'+esc(aiItem.a)+'</div>'
+   +(aiItem.m?'<div class="ai-ans-m">采分点 · '+esc(aiItem.m)+'</div>':'');
+ }
+ return '';
+}
+function aiAnswerShow(){
+ var el=document.getElementById('aiAnswer');if(!el)return;
+ var h=aiAnswerHtml();
+ if(!h){el.classList.remove('show');el.innerHTML='';return;}
+ el.innerHTML=h;el.classList.add('show');
+}
 var AICK='mti_ai_cache';
 function aiCacheKey(p){var s=aiCfg.model+'|'+p;var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return 'c'+(h>>>0).toString(36)+'_'+(s.length%9973);}
 function aiCacheGet(k){try{var c=JSON.parse(localStorage.getItem(AICK)||'{}');return c[k]?c[k].x:null}catch(e){return null}}
@@ -624,6 +667,7 @@ function aiView(){
  h+='<div class="ai-modes">'+[['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['write','✍️ 写作批改'],['free','💬 自由问答']].map(function(m){
    return '<button class="ai-mode'+(aiMode===m[0]?' on':'')+'" data-m="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div>';
  h+=aiTaskHtml();
+ h+='<div class="ai-answer" id="aiAnswer"></div>';
  h+='<div class="ai-out" id="aiOut"></div>';
  h+='<div class="ai-feedback" id="aiFeedback"></div>';
  h+='<div class="ai-mark" id="aiMark"><span>把这题记入记忆系统：</span><button class="yes2" id="aiMarkYes">✓ 会了</button><button class="no2" id="aiMarkNo">✗ 记入错题</button><i id="aiMarkMsg"></i></div>';
@@ -786,6 +830,7 @@ function bindAI(){
   var inp=document.getElementById('aiInput');
   var txt=inp?inp.value.trim():'';
   if(aiMode!=='ci'&&!txt)return;
+  aiAnswerShow();
   var mk=$('aiMark');if(mk){mk.classList.remove('show');var mg=$('aiMarkMsg');if(mg)mg.textContent='';
    var y=document.getElementById('aiMarkYes'),n=document.getElementById('aiMarkNo');
    if(y){y.disabled=false;y.classList.remove('suggest');}if(n){n.disabled=false;n.classList.remove('suggest');}}
@@ -840,9 +885,21 @@ function aiDecorateMist(){
    if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
    var x=AIPOOL[row.getAttribute('data-k')];if(!x)return;
    var p=row.querySelector('.ai-quiz-panel');
-   if(!p){p=document.createElement('div');p.className='ai-quiz-panel';ra.appendChild(p);}
+   if(!p){
+    p=document.createElement('div');p.className='ai-quiz-panel framed';
+    p.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out"></div>';
+    p.querySelector('.ai-panel-x').addEventListener('click',function(ev){
+     ev.stopPropagation();
+     p.classList.remove('show');
+     if(aiBusy&&aiAbort){try{aiAbort.abort();}catch(e){}}
+     var bb=p.querySelector('.ai-panel-body');if(bb){bb.innerHTML='';bb.classList.remove('show');}
+    });
+    ra.appendChild(p);
+   }
+   var pb=p.querySelector('.ai-panel-body');
+   pb.innerHTML='';
    p.classList.add('show');
-   aiStream(aiCardPrompt(x),p);
+   aiStream(aiCardPrompt(x),pb);
   });
  });
 }
@@ -869,6 +926,14 @@ render=function(){
 };
 
 /* ---- 刷题卡「AI 讲解」---- */
+var AI_SPARK='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4a6.1 6.1 0 0 0-3.6 11.1c.4.3.6.7.6 1.1h6c0-.4.2-.8.6-1.1A6.1 6.1 0 0 0 12 3.4Z"/><path d="M9.6 18.3h4.8M10.7 20.9h2.6"/><path d="m12 7.5.78 1.92 1.92.78-1.92.78L12 12.9l-.78-1.92-1.92-.78 1.92-.78z"/></svg>';
+function aiQuizHide(){
+ var p=document.getElementById('aiQuizPanel');
+ if(!p||!p.classList.contains('show'))return;
+ p.classList.remove('show');
+ if(aiBusy&&aiAbort){try{aiAbort.abort();}catch(e){}}
+ var b=document.getElementById('aiQuizBody');if(b){b.innerHTML='';b.classList.remove('show');}
+}
 var _aiOpenQuiz=openQuiz;
 openQuiz=function(ty){
  _aiOpenQuiz(ty);
@@ -876,21 +941,42 @@ openQuiz=function(ty){
  if(!ovl||!ovl.classList.contains('on'))return;
  if(!document.getElementById('aiQuizBtn')){
   var btn=document.createElement('button');
-  btn.id='aiQuizBtn';btn.className='ai-quiz-btn';btn.textContent='🤖 AI 讲解这张卡';
+  btn.id='aiQuizBtn';btn.className='ai-quiz-btn';btn.type='button';
+  btn.innerHTML=AI_SPARK+'<span>AI 讲解这张卡</span>';
   btn.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60';
   var panel=document.createElement('div');
-  panel.id='aiQuizPanel';panel.className='ai-quiz-panel';
+  panel.id='aiQuizPanel';panel.className='ai-quiz-panel framed';
+  panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div>';
   panel.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:64px;width:min(680px,92vw);z-index:60;box-shadow:0 18px 40px rgba(40,35,20,.25)';
   ovl.appendChild(panel);ovl.appendChild(btn);
+  var body=panel.querySelector('#aiQuizBody');
+  panel.querySelector('#aiQuizX').addEventListener('click',function(ev){ev.stopPropagation();aiQuizHide();});
+  ovl.addEventListener('click',function(ev){
+   if(!panel.classList.contains('show'))return;
+   if(panel.contains(ev.target)||btn.contains(ev.target))return;
+   aiQuizHide();
+  });
+  document.addEventListener('keydown',function(ev){
+   if(ev.key!=='Escape'&&ev.keyCode!==27)return;
+   var pp=document.getElementById('aiQuizPanel');
+   if(pp&&pp.classList.contains('show')){ev.stopPropagation();aiQuizHide();}
+  });
   btn.addEventListener('click',function(){
    if(aiBusy)return;
    if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
    var x=queue[qi];if(!x)return;
+   body.innerHTML='';
    panel.classList.add('show');
-   aiStream(aiCardPrompt(x),panel);
+   aiStream(aiCardPrompt(x),body);
   });
  }
 };
+/* 切卡 / 关闭自测层时自动收起讲解面板 */
+var _aiRenderQuiz=renderQuiz;
+renderQuiz=function(){aiQuizHide();return _aiRenderQuiz.apply(this,arguments);};
+var _aiCloseQuiz=closeQuiz;
+closeQuiz=function(){aiQuizHide();return _aiCloseQuiz.apply(this,arguments);};
+window.closeQuiz=closeQuiz;
 
 
 /* ==== 今日学习（td 模块）：每日学习包 + AI 批改联动 + 艾宾浩斯 ==== */
