@@ -574,9 +574,10 @@ function aiSpeak(t,acc){
    speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
  });
 }
+var AI_SPKI='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6.5 8.5H3.5v7h3L11 19z" fill="currentColor" stroke="none"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M17.8 6.2a8 8 0 0 1 0 11.6"/></svg>';
 function aiSpkHtml(t){
  var s=esc(String(t||'')).replace(/"/g,'&quot;');
- return '<span class="ai-spk-g"><button type="button" class="ai-spk" data-acc="us" data-say="'+s+'" title="美式发音">🔊 美</button><button type="button" class="ai-spk" data-acc="uk" data-say="'+s+'" title="英式发音">🔊 英</button></span>';
+ return '<span class="ai-spk-g"><button type="button" class="ai-spk" data-acc="us" data-say="'+s+'" title="美式发音">'+AI_SPKI+'美</button><button type="button" class="ai-spk" data-acc="uk" data-say="'+s+'" title="英式发音">'+AI_SPKI+'英</button></span>';
 }
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
@@ -695,21 +696,18 @@ function aiCardPrompt(x){
  var base='深度讲解这张备考卡片，帮我一次吃透、考场不丢分。卡片类型：'+x.type+'；题目：'+x.q+'；标准答案：'+x.a+(x.m?'；已有助记：'+x.m:'')+'。\n\n';
  var spec;
  if(x.type==='名解'){
-  spec='请严格按以下结构输出（### 小标题原样使用）：\n'
-   +'### 核心答案\n把标准答案扩写成可背诵的 120-180 字三段式（定义→背景→意义），考场可直接默写。\n'
-   +'### 采分点拆解\n- 按「定义3分/背景3分/意义4分」逐条列出阅卷给分点，**加粗**最容易漏的那一个\n'
-   +'### 延伸考点\n- 同主题最可能连环考的 2-3 个名解，各配一句极简核心答案\n- 这个知识点还可能出现的其他题型（选择/填空/大作文素材角度）\n'
+  spec='请严格按以下结构输出（### 小标题原样使用）。排序铁律：重要性从上往下严格递减，第一段就是考场答案本身，读者只背第一段就能拿分；越往后越是锦上添花：\n'
+   +'### 可背诵答案\n开头不要任何铺垫语，直接给 120-180 字三段式成品（定义→背景→意义），考场可一字不改默写。\n'
+   +'### 采分点与失分点\n- 按「定义3分/背景3分/意义4分」列给分点，**加粗**最容易漏的那一个\n- 一句话点破最常见的史实硬伤（年代/人名/张冠李戴易错处）\n'
    +'### 记忆钩子\n用一句联想或口诀把定义-背景-意义串起来。\n'
+   +'### 延伸备考（次要）\n- 同主题最可能连环考的 2-3 个名解，各配一句极简核心答案\n- 这个知识点的其他题型角度（选择/填空/大作文素材）\n'
    +'全文 500-700 字。';
  }else{
-  spec='请严格按以下结构输出（### 小标题原样使用）：\n'
-   +'### 译法与用法\n标准译法的词性与正式语境搭配、直译陷阱；缩略语给全称并逐词直译。\n'
-   +'### 逐词拆解\n- 按词根词缀/构词法拆每个实词，标注词源或联想画面\n'
-   +'### 易混辨析\n- 与 1-2 个最易搞混的词条/近义表达对比，各给一句判别口诀\n'
-   +'### 考点预判\n- 这张卡最可能怎么考（英译汉还是汉译英、考不考全称、常见变形），以及判分的得分/失分边界\n'
-   +'### 同主题联动\n- 3-5 个高频关联词条，英汉对照，优先近年时政热点\n'
-   +'### 记忆钩子\n一个新的谐音/画面/词源故事，一句话记住。\n'
-   +'### 真题例句\n1 句考研难度英文例句+中译，把本词条放进真实语境。\n'
+  spec='请严格按以下结构输出（### 小标题原样使用）。排序铁律：重要性从上往下严格递减，第一段必须浓缩全篇最核心的拿分信息，读者只看第一段就能答对这道题；越往后越是锦上添花：\n'
+   +'### 一击拿分\n开头第一段（80-140字）：**标准答案先行**+词性（缩略语给全称），点破这张卡**最容易答错的一个地方**，再给一个当场就能记住的钩子。这一段必须独立成立，考前扫一眼即提分。\n'
+   +'### 考点与判分\n- 最可能怎么考（英译汉/汉译英/考全称/常见变形）与判分的得分/失分边界\n- 与最易混的 1-2 个词条/近义表达辨析，各给一句判别口诀\n'
+   +'### 拆解与记忆\n- 按词根词缀/构词法拆每个实词，配词源或画面联想\n'
+   +'### 扩展积累（次要）\n- 同主题高频关联词条 3-5 个，英汉对照，优先近年时政热点\n- 1 句考研难度真题风格例句+中译\n'
    +'全文 600-900 字。';
  }
  return base+spec+'\n排版铁律：只用 ### 小标题、**粗体**、「- 」无序列表；禁用表格/代码块/引用块/#与##标题/有序列表。所有内容必须具体到词句、可背诵可落笔，不写「多积累」式空话。';
@@ -760,7 +758,7 @@ aiExpCloudPull();
 function aiAskPrompt(x,q){
  return '关于这张备考卡片的追问。卡片类型：'+x.type+'；题目：'+x.q+'；标准答案：'+x.a+(x.m?'；助记：'+x.m:'')
   +'。\n我的问题：'+q
-  +'\n要求：站在 MTI 阅卷人与备考教练视角直接回答我的问题，结合这张卡的语境与南昌大学 MTI 备考需要；内容具体到词句、可背诵可落笔，不写空话；300-600 字。排版铁律：只用 ### 小标题、**粗体**、「- 」无序列表；禁用表格/代码块/引用块/#与##标题/有序列表。';
+  +'\n要求：第一句话先给直接结论/答案，再展开理由。站在 MTI 阅卷人与备考教练视角回答，结合这张卡的语境与南昌大学 MTI 备考需要；内容具体到词句、可背诵可落笔，不写空话；300-600 字。排版铁律：只用 ### 小标题、**粗体**、「- 」无序列表；禁用表格/代码块/引用块/#与##标题/有序列表。';
 }
 function aiAskGo(panel){
  if(aiBusy)return;
@@ -1553,6 +1551,10 @@ setNav();
  .qclose{color:var(--green2);background:rgba(46,74,56,.07);border-color:rgba(46,74,56,.28);backdrop-filter:none;-webkit-backdrop-filter:none}
  .qclose:hover{background:rgba(46,74,56,.16)}
 }
+.spk{top:12px;right:12px;width:38px;height:38px;padding:0;font-size:0;border:1px solid rgba(255,255,255,.32);background-color:rgba(255,255,255,.16);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 5 6.5 8.5H3.5v7h3L11 19z' fill='%23fff' stroke='none'/%3E%3Cpath d='M15 9a4 4 0 0 1 0 6'/%3E%3Cpath d='M17.8 6.2a8 8 0 0 1 0 11.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:19px 19px}
+.spk:hover{background-color:rgba(255,255,255,.30)}
+.ai-spk{display:inline-flex;align-items:center;gap:4px}
+.ai-spk svg{flex:none}
 </style>
 </body>
 </html>
