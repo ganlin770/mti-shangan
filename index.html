@@ -712,6 +712,34 @@ function aiCardPrompt(x){
  }
  return base+spec+'\n排版铁律：只用 ### 小标题、**粗体**、「- 」无序列表；禁用表格/代码块/引用块/#与##标题/有序列表。所有内容必须具体到词句、可背诵可落笔，不写「多积累」式空话。';
 }
+/* ---- 讲解结果本机保存：按卡 key 持久（LRU 300），秒开不耗额度，可重新生成 ---- */
+var AIEK='mti_ai_explain';
+function aiExpAll(){try{return JSON.parse(localStorage.getItem(AIEK)||'{}')}catch(e){return {}}}
+function aiExpGet(k){var c=aiExpAll();return c[k]||null;}
+function aiExpPut(k,text){
+ try{
+  var c=aiExpAll();c[k]={x:text,t:Date.now(),m:aiCfg.model};
+  var ks=Object.keys(c);
+  if(ks.length>300){ks.sort(function(a,b){return c[a].t-c[b].t;});ks.slice(0,ks.length-300).forEach(function(d){delete c[d];});}
+  localStorage.setItem(AIEK,JSON.stringify(c));
+ }catch(e){try{localStorage.removeItem(AIEK)}catch(e2){}}
+}
+function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
+function aiExpShow(body,key,c){
+ body.classList.add('show');
+ body.innerHTML=aiMd(c.x)+'<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' 生成 · 本次未耗额度<button type="button" class="ai-pick" id="aiExpRegen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">重新生成</button></div>';
+}
+document.addEventListener('click',function(ev){
+ var tg=ev.target;if(!tg||!tg.closest)return;
+ var rb=tg.closest('#aiExpRegen');
+ if(!rb)return;
+ if(aiBusy)return;
+ if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+ var k=rb.getAttribute('data-k');var x=AIPOOL[k];if(!x)return;
+ var pp=rb.closest('.ai-quiz-panel');var pb=pp&&pp.querySelector('.ai-panel-body');if(!pb)return;
+ pb.innerHTML='';
+ aiStream(aiCardPrompt(x),pb,function(t){if(t)aiExpPut(k,t);});
+});
 
 /* ---- 视图 ---- */
 var AI_WTYPES=[['speech','应用文 · 演讲稿'],['letter','应用文 · 商务信函'],['notice','应用文 · 通知'],['ad','应用文 · 广告'],['manual','应用文 · 说明书'],['report','应用文 · 报告'],['essay448','448 大作文'],['essay211','211 英语作文']];
@@ -946,12 +974,12 @@ function aiDecorateMist(){
   if(row.querySelector('.ai-row-btn'))return;
   var ra=row.querySelector('.ra');if(!ra)return;
   var b=document.createElement('button');
-  b.className='ai-pick ai-row-btn';b.textContent='🤖 AI 讲解';
+  b.className='ai-pick ai-row-btn';
+  b.innerHTML=AI_SPARK+'<span>'+(aiExpGet(row.getAttribute('data-k'))?'查看讲解（已保存）':'AI 讲解')+'</span>';
   ra.appendChild(b);
   b.addEventListener('click',function(ev){
    ev.stopPropagation();
    if(aiBusy)return;
-   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
    var x=AIPOOL[row.getAttribute('data-k')];if(!x)return;
    var p=row.querySelector('.ai-quiz-panel');
    if(!p){
@@ -970,7 +998,12 @@ function aiDecorateMist(){
    pb.innerHTML='';
    p.classList.add('show');
    ra.classList.add('ai-open');
-   aiStream(aiCardPrompt(x),pb);
+   var c=aiExpGet(x.key);
+   if(c){aiExpShow(pb,x.key,c);return;}
+   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+   aiStream(aiCardPrompt(x),pb,function(t){
+    if(t){aiExpPut(x.key,t);var sp=b.querySelector('span');if(sp)sp.textContent='查看讲解（已保存）';}
+   });
   });
  });
 }
@@ -1041,11 +1074,13 @@ openQuiz=function(ty){
   });
   btn.addEventListener('click',function(){
    if(aiBusy)return;
-   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
    var x=queue[qi];if(!x)return;
    body.innerHTML='';
    panel.classList.add('show');
-   aiStream(aiCardPrompt(x),body);
+   var c=aiExpGet(x.key);
+   if(c){aiExpShow(body,x.key,c);return;}
+   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+   aiStream(aiCardPrompt(x),body,function(t){if(t){aiExpPut(x.key,t);var sp=btn.querySelector('span');if(sp)sp.textContent='查看讲解（已保存）';}});
   });
  }
 };
@@ -1087,7 +1122,10 @@ openQuiz=function(ty){
 var _qzRenderQuiz=renderQuiz;
 renderQuiz=function(){
  var r=_qzRenderQuiz.apply(this,arguments);
- var _qb=document.getElementById('aiQuizBtn');if(_qb)_qb.disabled=qi>=queue.length;
+ var _qb=document.getElementById('aiQuizBtn');
+ if(_qb){_qb.disabled=qi>=queue.length;
+  var _qx=queue[qi];var _qs=_qb.querySelector('span');
+  if(_qs)_qs.textContent=(_qx&&aiExpGet(_qx.key))?'查看讲解（已保存）':'AI 讲解这张卡';}
  if(tdQzActive&&st.daily&&st.daily.qzMap){
   var S=st.daily.qzMap[tdQzActive.sig];
   if(S){
@@ -1426,6 +1464,9 @@ setNav();
 .qclose{top:16px;right:18px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:300;line-height:1;color:rgba(255,255,255,.92);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:50%;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .18s,transform .18s;user-select:none}
 .qclose:hover{background:rgba(255,255,255,.24);transform:rotate(90deg)}
 .qclose:active{transform:rotate(90deg) scale(.92)}
+.ai-exp-bar{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--mut)}
+.ai-exp-bar .ai-pick{margin-left:auto;flex:none}
+.ai-row-btn svg{vertical-align:-3px;margin-right:4px}
 </style>
 </body>
 </html>
