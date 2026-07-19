@@ -668,15 +668,23 @@ function aiPaint(target,html){
 }
 function aiStream(userText,target,onDone){
  aiAbort=new AbortController();aiBusy=true;
- var t0=Date.now();
- aiPaint(target,'<span class="cursor"></span>');
+ var t0=Date.now();var aiwPhase=0;var aiwT=null;
+ function aiwPaint(){
+  var s=Math.floor((Date.now()-t0)/1000);
+  var msg=aiwPhase===0?'请求已发出 · 等待 '+esc(aiModelLabel())+' 响应':'<b>已连接</b> · '+esc(aiModelLabel())+' 正在生成';
+  var tip=s>=25?'<span class="ai-wait-tip">长文批改可能需要 30-60 秒，连接未断，请稍候（也可点「停止」）</span>':'';
+  aiPaint(target,'<div class="ai-wait'+(aiwPhase?' on':'')+'"><span class="ai-wait-dots"><i></i><i></i><i></i></span><span>'+msg+' · 已等待 '+s+' 秒</span>'+tip+'</div>');
+ }
+ function aiwStop(){if(aiwT){clearInterval(aiwT);aiwT=null;}}
+ aiwPaint();aiwT=setInterval(aiwPaint,1000);
  fetch(aiBase()+'/v1/chat/completions',{
   method:'POST',signal:aiAbort.signal,
   headers:{'content-type':'application/json','authorization':'Bearer '+aiCfg.key},
   body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:3400,
    messages:[{role:'system',content:aiSys()},{role:'user',content:userText}]})
  }).then(function(r){
-  if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});
+  if(!r.ok){aiwStop();return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});}
+  aiwPhase=1;aiwPaint();
   var rd=r.body.getReader(),dec=new TextDecoder(),buf='',full='';
   function pump(){return rd.read().then(function(res){
    if(res.done){fin(full);return;}
@@ -684,12 +692,12 @@ function aiStream(userText,target,onDone){
    var lines=buf.split('\n');buf=lines.pop();
    lines.forEach(function(l){l=l.trim();if(l.indexOf('data:')!==0)return;var d=l.slice(5).trim();if(!d||d==='[DONE]')return;
     try{var j=JSON.parse(d);var c=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
-     if(c){full+=c;aiPaint(target,aiMd(full)+'<span class="cursor"></span>');}}catch(e){}});
+     if(c){if(!full)aiwStop();full+=c;aiPaint(target,aiMd(full)+'<span class="cursor"></span>');}}catch(e){}});
    return pump();});}
   return pump();
-  function fin(text){aiPaint(target,aiMd(text||'（无内容返回）'));aiBusy=false;onDone&&onDone(text,Date.now()-t0);}
+  function fin(text){aiwStop();aiPaint(target,aiMd(text||'（无内容返回）'));aiBusy=false;onDone&&onDone(text,Date.now()-t0);}
  }).catch(function(e){
-  aiBusy=false;
+  aiwStop();aiBusy=false;
   if(e.name==='AbortError'){aiPaint(target,'<i style="color:var(--mut)">（已停止）</i>');onDone&&onDone(null,0);return;}
   aiPaint(target,'<span style="color:var(--rust)">⚠ 请求失败：'+esc(e.message)+'</span><br><span style="color:var(--mut);font-size:12px">检查网关地址与 Key 是否正确、网络是否可达。</span>');
   onDone&&onDone(null,0);
@@ -1564,6 +1572,15 @@ setNav();
 .ai-ask-block{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
 .ai-ask-q{font-weight:700;color:var(--green2);font-size:14px;margin-bottom:6px}
 .ai-ask-a{font-size:15px;line-height:1.95}
+.ai-wait{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:var(--mut);font-size:13px;padding:4px 0}
+.ai-wait.on{color:var(--green2)}
+.ai-wait b{font-weight:700}
+.ai-wait-dots{display:inline-flex;gap:4px;flex:none}
+.ai-wait-dots i{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.35;animation:aiwB 1.2s infinite}
+.ai-wait-dots i:nth-child(2){animation-delay:.2s}
+.ai-wait-dots i:nth-child(3){animation-delay:.4s}
+@keyframes aiwB{0%,80%,100%{opacity:.25;transform:scale(.85)}40%{opacity:1;transform:scale(1.15)}}
+.ai-wait-tip{font-size:12px;color:var(--mut);width:100%}
 @media (min-width:900px){
  .qclose{color:var(--green2);background:rgba(46,74,56,.07);border-color:rgba(46,74,56,.28);backdrop-filter:none;-webkit-backdrop-filter:none}
  .qclose:hover{background:rgba(46,74,56,.16)}
