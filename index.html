@@ -585,6 +585,8 @@ document.addEventListener('click',function(ev){
  var c=tg.closest('.ai-td-chip');
  if(c)aiSpeak(c.textContent,'us');
 });
+/* 覆盖原站 speak：抽背卡等全站发音统一走有道词典标准音（TTS 自动兜底）*/
+speak=function(t){var s=String(t||'').trim();if(s)aiSpeak(s,'us');};
 
 /* ---- 标准答案条（判分瞬间先给答案，AI 解释在下方流式输出）---- */
 function aiAnswerHtml(){
