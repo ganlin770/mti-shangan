@@ -754,6 +754,45 @@ function aiExpCloudPull(){
  }catch(e){}
 }
 aiExpCloudPull();
+/* ---- 讲解面板自由追问：针对当前卡问自己的问题，回答追加在讲解下方（不覆盖已存讲解）---- */
+function aiAskPrompt(x,q){
+ return '关于这张备考卡片的追问。卡片类型：'+x.type+'；题目：'+x.q+'；标准答案：'+x.a+(x.m?'；助记：'+x.m:'')
+  +'。\n我的问题：'+q
+  +'\n要求：站在 MTI 阅卷人与备考教练视角直接回答我的问题，结合这张卡的语境与南昌大学 MTI 备考需要；内容具体到词句、可背诵可落笔，不写空话；300-600 字。排版铁律：只用 ### 小标题、**粗体**、「- 」无序列表；禁用表格/代码块/引用块/#与##标题/有序列表。';
+}
+function aiAskGo(panel){
+ if(aiBusy)return;
+ var inp=panel.querySelector('.ai-ask-inp');if(!inp)return;
+ var q=inp.value.trim();if(!q)return;
+ if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+ var x=null;
+ if(panel.id==='aiQuizPanel'){x=queue[qi];}
+ else{var row=panel.closest('.row');x=row?AIPOOL[row.getAttribute('data-k')]:null;}
+ if(!x)return;
+ var body=panel.querySelector('.ai-panel-body');if(!body)return;
+ panel.classList.add('show');
+ body.classList.add('show');
+ var ra2=panel.closest('.ra');if(ra2)ra2.classList.add('ai-open');
+ var blk=document.createElement('div');blk.className='ai-ask-block';
+ blk.innerHTML='<div class="ai-ask-q">❓ '+esc(q)+'</div><div class="ai-ask-a"></div>';
+ body.appendChild(blk);
+ body.scrollTop=body.scrollHeight;
+ inp.value='';
+ aiStream(aiAskPrompt(x,q),blk.querySelector('.ai-ask-a'),function(){body.scrollTop=body.scrollHeight;});
+}
+document.addEventListener('click',function(ev){
+ var tg=ev.target;if(!tg||!tg.closest)return;
+ var bb=tg.closest('.ai-ask-btn');if(!bb)return;
+ ev.stopPropagation();
+ var p=bb.closest('.ai-quiz-panel');if(p)aiAskGo(p);
+});
+document.addEventListener('keydown',function(ev){
+ if(ev.key!=='Enter'&&ev.keyCode!==13)return;
+ var tg=ev.target;
+ if(!tg||!tg.classList||!tg.classList.contains('ai-ask-inp'))return;
+ ev.preventDefault();ev.stopPropagation();
+ var p=tg.closest('.ai-quiz-panel');if(p)aiAskGo(p);
+});
 function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function aiExpShow(body,key,c){
  body.classList.add('show');
@@ -1014,7 +1053,8 @@ function aiDecorateMist(){
    var p=row.querySelector('.ai-quiz-panel');
    if(!p){
     p=document.createElement('div');p.className='ai-quiz-panel framed';
-    p.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out"></div>';
+    p.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out"></div><div class="ai-ask-row"><input class="ai-ask-inp" placeholder="对这张卡有自己的疑问？直接问 AI…"><button type="button" class="ai-ask-btn">提问</button></div>';
+    p.addEventListener('click',function(ev){ev.stopPropagation();});
     p.querySelector('.ai-panel-x').addEventListener('click',function(ev){
      ev.stopPropagation();
      p.classList.remove('show');
@@ -1086,7 +1126,7 @@ openQuiz=function(ty){
   /* 定位交给 CSS：小屏=底部悬浮 / 桌面=左栏（split-layout v1）*/
   var panel=document.createElement('div');
   panel.id='aiQuizPanel';panel.className='ai-quiz-panel framed';
-  panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div>';
+  panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div><div class="ai-ask-row"><input class="ai-ask-inp" placeholder="对这张卡有自己的疑问？直接问 AI…"><button type="button" class="ai-ask-btn">提问</button></div>';
   /* 定位交给 CSS：小屏=底部弹出 / 桌面=左栏常驻（split-layout v1）*/
   ovl.appendChild(panel);ovl.appendChild(btn);
   var body=panel.querySelector('#aiQuizBody');
@@ -1476,7 +1516,7 @@ setNav();
   #aiQuizPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:64px;width:min(680px,92vw);z-index:60;box-shadow:0 18px 40px rgba(40,35,20,.25)}
 }
 @media (min-width:900px){
-  .ovl.on{display:grid;grid-template-columns:minmax(340px,40%) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;align-items:stretch;justify-items:stretch;gap:14px 22px;padding:26px 30px}
+  .ovl.on{display:grid;grid-template-columns:minmax(340px,40%) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;align-items:stretch;justify-items:stretch;gap:12px 14px;padding:14px 16px}
   #aiQuizPanel{position:static;left:auto;bottom:auto;transform:none;width:auto;margin:0;grid-column:1;grid-row:1;align-self:stretch;justify-self:stretch;display:flex;flex-direction:column;min-height:0;height:100%;max-height:none;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.18);overflow:hidden}
   #aiQuizPanel .ai-panel-body{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
   #aiQuizBody{display:block}
@@ -1487,7 +1527,7 @@ setNav();
   #aiQuizBtn svg{color:#f3efe6;opacity:.95}
   #quizbox{grid-column:2;grid-row:1 / 3;align-self:stretch;justify-self:stretch;width:auto;max-width:none;margin:0;max-height:100%;overflow-y:auto;display:flex;flex-direction:column;justify-content:center}
   .ovl.on #quizbox>*{flex:none}
-  .ovl.on .qcard{height:clamp(440px,56vh,560px)}
+  .ovl.on .qcard{height:clamp(440px,66vh,760px)}
   .qclose{z-index:70}
 }
 .ai-quiz-btn:disabled{opacity:.45;cursor:default;pointer-events:none}
@@ -1499,6 +1539,18 @@ setNav();
 .ai-row-btn svg{vertical-align:-3px;margin-right:4px}
 .ai-panel-body{font-size:15px;line-height:1.95}
 .ai-panel-body h4{font-size:17px}
+.ai-ask-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.35);flex:none}
+.ai-ask-inp{flex:1;min-width:0;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13.5px;background:#fff;font-family:inherit;color:var(--ink)}
+.ai-ask-inp:focus{outline:none;border-color:var(--green)}
+.ai-ask-btn{flex:none;border:1px solid var(--green);background:var(--green);color:#f3efe6;border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit}
+.ai-ask-btn:hover{background:var(--green2)}
+.ai-ask-block{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.ai-ask-q{font-weight:700;color:var(--green2);font-size:14px;margin-bottom:6px}
+.ai-ask-a{font-size:15px;line-height:1.95}
+@media (min-width:900px){
+ .qclose{color:var(--green2);background:rgba(46,74,56,.07);border-color:rgba(46,74,56,.28);backdrop-filter:none;-webkit-backdrop-filter:none}
+ .qclose:hover{background:rgba(46,74,56,.16)}
+}
 </style>
 </body>
 </html>
