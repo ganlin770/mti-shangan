@@ -500,6 +500,7 @@ var aiCfg;
 try{aiCfg=JSON.parse(localStorage.getItem(AIK)||'{}');}catch(e){aiCfg={};}
 aiCfg.url=aiCfg.url||'https://ganlin-ai-token-gateway.ganlin-ai-gateway.workers.dev';
 aiCfg.model=aiCfg.model||'claude-opus-4-8';
+if(aiCfg.fast===undefined)aiCfg.fast=true;
 
 var AI_MODELS=[
  ['claude-opus-4-8','Opus 4.8 · 最强'],
@@ -631,7 +632,7 @@ function aiAnswerShow(){
  el.innerHTML=h;el.classList.add('show');
 }
 var AICK='mti_ai_cache';
-function aiCacheKey(p){var s=aiCfg.model+'|'+p;var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return 'c'+(h>>>0).toString(36)+'_'+(s.length%9973);}
+function aiCacheKey(p,mdl){var s=(mdl||aiCfg.model)+'|'+p;var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return 'c'+(h>>>0).toString(36)+'_'+(s.length%9973);}
 function aiCacheGet(k){try{var c=JSON.parse(localStorage.getItem(AICK)||'{}');return c[k]?c[k].x:null}catch(e){return null}}
 function aiCachePut(k,x){try{var c=JSON.parse(localStorage.getItem(AICK)||'{}');c[k]={x:x,t:Date.now()};var ks=Object.keys(c);if(ks.length>60){ks.sort(function(a,b){return c[a].t-c[b].t;});ks.slice(0,ks.length-60).forEach(function(d){delete c[d];});}localStorage.setItem(AICK,JSON.stringify(c))}catch(e){try{localStorage.removeItem(AICK)}catch(e2){}}}
 
@@ -642,7 +643,8 @@ var aiWType='speech';var aiWTheme=-1;var aiWReq='';
 var AIPOOL={};POOL.forEach(function(x){AIPOOL[x.key]=x;});
 
 function aiRefresh(){document.getElementById('view').innerHTML=aiView();bindAI();}
-function aiModelLabel(){for(var i=0;i<AI_MODELS.length;i++)if(AI_MODELS[i][0]===aiCfg.model)return AI_MODELS[i][1];return aiCfg.model;}
+function aiLabelM(m){for(var i=0;i<AI_MODELS.length;i++)if(AI_MODELS[i][0]===m)return AI_MODELS[i][1];return m;}
+function aiModelLabel(){return aiLabelM(aiCfg.model);}
 function aiSave(){localStorage.setItem(AIK,JSON.stringify(aiCfg));}
 function aiOk(){return !!(aiCfg.key&&aiCfg.url);}
 function aiBase(){return String(aiCfg.url||'').replace(/\/+$/,'');}
@@ -666,12 +668,13 @@ function aiPaint(target,html){
  var el=typeof target==='string'?document.getElementById(target):target;
  if(!el)return;el.classList.add('show');el.innerHTML=html;
 }
-function aiStream(userText,target,onDone){
+function aiStream(userText,target,onDone,mdlOverride){
+ var mdl=mdlOverride||aiCfg.model;
  aiAbort=new AbortController();aiBusy=true;
  var t0=Date.now();var aiwPhase=0;var aiwT=null;
  function aiwPaint(){
   var s=Math.floor((Date.now()-t0)/1000);
-  var msg=aiwPhase===0?'请求已发出 · 等待 '+esc(aiModelLabel())+' 响应':'<b>已连接</b> · '+esc(aiModelLabel())+' 正在生成';
+  var msg=aiwPhase===0?'请求已发出 · 等待 '+esc(aiLabelM(mdl))+' 响应':'<b>已连接</b> · '+esc(aiLabelM(mdl))+' 正在生成';
   var tip=s>=25?'<span class="ai-wait-tip">长文批改可能需要 30-60 秒，连接未断，请稍候（也可点「停止」）</span>':'';
   aiPaint(target,'<div class="ai-wait'+(aiwPhase?' on':'')+'"><span class="ai-wait-dots"><i></i><i></i><i></i></span><span>'+msg+' · 已等待 '+s+' 秒</span>'+tip+'</div>');
  }
@@ -680,7 +683,7 @@ function aiStream(userText,target,onDone){
  fetch(aiBase()+'/v1/chat/completions',{
   method:'POST',signal:aiAbort.signal,
   headers:{'content-type':'application/json','authorization':'Bearer '+aiCfg.key},
-  body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:3400,
+  body:JSON.stringify({model:mdl,stream:true,max_tokens:3400,
    messages:[{role:'system',content:aiSys()},{role:'user',content:userText}]})
  }).then(function(r){
   if(!r.ok){aiwStop();return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});}
@@ -846,7 +849,7 @@ function aiView(){
  if(!aiVItem)aiVItem=aiDrawV();
  var h='<div class="ai-wrap">';
  if(aiOk()&&!aiSetupOpen){
-  h+='<div class="ai-setup ai-setup--slim"><span class="ai-slim-dot"></span><span>已连接自建网关</span><b>'+esc(aiModelLabel())+'</b><button class="ai-pick" id="aiCfgEdit">修改设置</button></div>';
+  h+='<div class="ai-setup ai-setup--slim"><span class="ai-slim-dot"></span><span>已连接自建网关</span><b>'+esc(aiModelLabel())+'</b>'+(aiCfg.fast?'<span class="ai-slim-fast">⚡ 极速判分</span>':'')+'<button class="ai-pick" id="aiCfgEdit">修改设置</button></div>';
  }else{
  h+='<div class="ai-setup"><div class="pl">连接设置 · 自建 CLAUDE 网关</div><div class="ai-setup-grid">'
   +'<input id="aiUrl" placeholder="网关地址 https://…" value="'+esc(aiCfg.url)+'">'
@@ -854,6 +857,7 @@ function aiView(){
   +'<select id="aiModel">'+AI_MODELS.map(function(m){return '<option value="'+m[0]+'"'+(aiCfg.model===m[0]?' selected':'')+'>'+m[1]+'</option>';}).join('')+'</select>'
   +'<button class="ai-test" id="aiTest">测试连接</button></div>'
   +'<div class="ai-status" id="aiStatus"></div>'
+  +'<label class="ai-fastopt"><input type="checkbox" id="aiFast"'+(aiCfg.fast?' checked':'')+'> ⚡ 极速判分：词条 / 词汇判定自动用 Haiku（快 3-5 倍），翻译写作批改与讲解仍用上面所选模型</label>'
   +'<div class="ai-hint">Key 仅保存在<b>本机浏览器</b>，不会出现在网页源码或仓库里。建议在网关控制台为本站单独创建一把 Key（可独立统计、随时吊销）。批改类任务建议用 <b>Opus</b>，快问快答用 <b>Haiku</b>。'+(aiOk()?' <button class="ai-pick" id="aiCfgClose" style="margin-left:6px">收起 ▲</button>':'')+'</div></div>';
  }
  h+='<div class="ai-modes">'+[['today','📅 今日特训'],['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['write','✍️ 写作批改'],['free','💬 自由问答']].map(function(m){
@@ -972,6 +976,7 @@ function bindAI(){
   }).then(function(d){var n=(d.data||d.models||[]).length;s.className='ai-status ok';s.textContent='✓ 已连通，网关开放 '+n+' 个模型，Key 有效。';setTimeout(function(){if(cur==='ai'&&aiOk()){aiSetupOpen=false;aiRefresh();}},900);})
   .catch(function(e){s.className='ai-status err';s.textContent='✗ 连接失败：'+e.message+'（检查地址 / Key）';});
  });
+ var ff=$('aiFast');if(ff)ff.addEventListener('change',function(){aiCfg.fast=this.checked;aiSave();});
  var ce=$('aiCfgEdit');if(ce)ce.addEventListener('click',function(){aiSetupOpen=true;aiRefresh();});
  var cc=$('aiCfgClose');if(cc)cc.addEventListener('click',function(){aiSetupOpen=false;aiRefresh();});
  var srct=$('aiSrcT');if(srct)srct.addEventListener('click',function(){aiSrcOpen=!aiSrcOpen;var s=$('aiSrc');if(s)s.classList.toggle('open',aiSrcOpen);this.textContent=aiSrcOpen?'收起原文 ▲':'展开全文 ▼';});
@@ -1027,7 +1032,8 @@ function bindAI(){
    if(y){y.disabled=false;y.classList.remove('suggest');}if(n){n.disabled=false;n.classList.remove('suggest');}}
   var fb=document.getElementById('aiFeedback');if(fb){fb.classList.remove('done');fb.classList.remove('show');}
   var prompt=aiPrompt(txt);
-  var ck=aiCacheKey(prompt);
+  var mdl=(aiCfg.fast&&aiMode==='ci')?'claude-haiku-4-5-20251001':aiCfg.model;
+  var ck=aiCacheKey(prompt,mdl);
   var f=document.getElementById('aiFoot');
   if(!force){
    var hit=aiCacheGet(ck);
@@ -1053,9 +1059,9 @@ function bindAI(){
     aiFeedbackShow(v);
     aiShowMark(v);
     tdOnJudged(v,text);
-    if(f2){f2.classList.add('show');f2.textContent='模型 '+aiCfg.model+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
+    if(f2){f2.classList.add('show');f2.textContent='模型 '+mdl+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
    }
-  });
+  },mdl);
  }
  var _sd=$('aiSend');if(_sd)_sd.addEventListener('click',function(){aiDoSend(false);});
  var _sp=$('aiStop');if(_sp)_sp.addEventListener('click',function(){if(aiAbort)aiAbort.abort();});
@@ -1585,6 +1591,9 @@ setNav();
 @keyframes aiwB{0%,80%,100%{opacity:.25;transform:scale(.85)}40%{opacity:1;transform:scale(1.15)}}
 .ai-wait-tip{font-size:12px;color:var(--mut);width:100%}
 .ai-panel-sub{font-size:12.5px;color:var(--mut);max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:2px}
+.ai-fastopt{display:flex;align-items:center;gap:7px;margin:10px 2px 0;font-size:12.5px;color:var(--ink);cursor:pointer;line-height:1.6}
+.ai-fastopt input{accent-color:var(--green);width:15px;height:15px;flex:none}
+.ai-slim-fast{font-size:11.5px;color:var(--green2);border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin-left:8px;background:rgba(46,74,56,.05)}
 @media (min-width:900px){
  .qclose{color:var(--green2);background:rgba(46,74,56,.07);border-color:rgba(46,74,56,.28);backdrop-filter:none;-webkit-backdrop-filter:none}
  .qclose:hover{background:rgba(46,74,56,.16)}
