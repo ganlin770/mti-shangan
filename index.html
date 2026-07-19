@@ -797,6 +797,7 @@ function aiAskGo(panel){
  var body=panel.querySelector('.ai-panel-body');if(!body)return;
  panel.classList.add('show');
  body.classList.add('show');
+ if(panel.id==='aiQuizPanel'){var _sub2=document.getElementById('aiQuizSub');if(_sub2)_sub2.textContent='· '+x.q;}
  var ra2=panel.closest('.ra');if(ra2)ra2.classList.add('ai-open');
  var blk=document.createElement('div');blk.className='ai-ask-block';
  blk.innerHTML='<div class="ai-ask-q">❓ '+esc(q)+'</div><div class="ai-ask-a"></div>';
@@ -1127,6 +1128,7 @@ render=function(){
 /* ---- 刷题卡「AI 讲解」---- */
 var AI_SPARK='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4a6.1 6.1 0 0 0-3.6 11.1c.4.3.6.7.6 1.1h6c0-.4.2-.8.6-1.1A6.1 6.1 0 0 0 12 3.4Z"/><path d="M9.6 18.3h4.8M10.7 20.9h2.6"/><path d="m12 7.5.78 1.92 1.92.78-1.92.78L12 12.9l-.78-1.92-1.92-.78 1.92-.78z"/></svg>';
 function aiQuizHide(){
+ var _s=document.getElementById('aiQuizSub');if(_s)_s.textContent='';
  var p=document.getElementById('aiQuizPanel');
  if(!p)return;
  if(window.matchMedia&&window.matchMedia('(min-width:900px)').matches){
@@ -1151,7 +1153,7 @@ openQuiz=function(ty){
   /* 定位交给 CSS：小屏=底部悬浮 / 桌面=左栏（split-layout v1）*/
   var panel=document.createElement('div');
   panel.id='aiQuizPanel';panel.className='ai-quiz-panel framed';
-  panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div><div class="ai-ask-row"><input class="ai-ask-inp" placeholder="对这张卡有自己的疑问？直接问 AI…"><button type="button" class="ai-ask-btn">提问</button></div>';
+  panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="ai-panel-sub" id="aiQuizSub"></span><span class="sp"></span><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div><div class="ai-ask-row"><input class="ai-ask-inp" placeholder="对这张卡有自己的疑问？直接问 AI…"><button type="button" class="ai-ask-btn">提问</button></div>';
   /* 定位交给 CSS：小屏=底部弹出 / 桌面=左栏常驻（split-layout v1）*/
   ovl.appendChild(panel);ovl.appendChild(btn);
   var body=panel.querySelector('#aiQuizBody');
@@ -1172,6 +1174,7 @@ openQuiz=function(ty){
    var x=queue[qi];if(!x)return;
    body.innerHTML='';
    panel.classList.add('show');
+   var _sub=document.getElementById('aiQuizSub');if(_sub)_sub.textContent='· '+x.q;
    var c=aiExpGet(x.key);
    if(c){aiExpShow(body,x.key,c);return;}
    if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
@@ -1181,7 +1184,7 @@ openQuiz=function(ty){
 };
 /* 切卡 / 关闭自测层时自动收起讲解面板 */
 var _aiRenderQuiz=renderQuiz;
-renderQuiz=function(){aiQuizHide();return _aiRenderQuiz.apply(this,arguments);};
+renderQuiz=function(){return _aiRenderQuiz.apply(this,arguments);};/* 切卡不清讲解：流式继续、内容保留（关层/✕才清）*/
 var _aiCloseQuiz=closeQuiz;
 closeQuiz=function(){aiQuizHide();return _aiCloseQuiz.apply(this,arguments);};
 window.closeQuiz=closeQuiz;
@@ -1581,6 +1584,7 @@ setNav();
 .ai-wait-dots i:nth-child(3){animation-delay:.4s}
 @keyframes aiwB{0%,80%,100%{opacity:.25;transform:scale(.85)}40%{opacity:1;transform:scale(1.15)}}
 .ai-wait-tip{font-size:12px;color:var(--mut);width:100%}
+.ai-panel-sub{font-size:12.5px;color:var(--mut);max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:2px}
 @media (min-width:900px){
  .qclose{color:var(--green2);background:rgba(46,74,56,.07);border-color:rgba(46,74,56,.28);backdrop-filter:none;-webkit-backdrop-filter:none}
  .qclose:hover{background:rgba(46,74,56,.16)}
