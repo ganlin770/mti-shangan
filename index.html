@@ -722,8 +722,38 @@ function aiExpPut(k,text){
   var ks=Object.keys(c);
   if(ks.length>300){ks.sort(function(a,b){return c[a].t-c[b].t;});ks.slice(0,ks.length-300).forEach(function(d){delete c[d];});}
   localStorage.setItem(AIEK,JSON.stringify(c));
+  aiExpCloudPush();
  }catch(e){try{localStorage.removeItem(AIEK)}catch(e2){}}
 }
+/* 讲解云同步：独立行(SB_ID+'_exp')，生成后防抖4s整卷推送；启动拉取按时间戳新者合并。
+   网络不可达时静默降级为仅本机（与原站进度云同步同行为）。*/
+var aiExpPushT=null;
+function aiExpCloudPush(){
+ if(!sb)return;
+ if(aiExpPushT)clearTimeout(aiExpPushT);
+ aiExpPushT=setTimeout(function(){
+  aiExpPushT=null;
+  try{
+   sb.from('progress').upsert({id:SB_ID+'_exp',payload:aiExpAll(),updated_at:new Date().toISOString()})
+    .then(function(r){if(r&&r.error)console.warn('exp push:',r.error.message);});
+  }catch(e){}
+ },4000);
+}
+function aiExpCloudPull(){
+ if(!sb)return;
+ try{
+  sb.from('progress').select('payload').eq('id',SB_ID+'_exp').maybeSingle().then(function(r){
+   try{
+    if(!(r&&r.data&&r.data.payload))return;
+    var cloud=r.data.payload;var loc=aiExpAll();var ch=false;
+    for(var k in cloud){var cv=cloud[k],lv=loc[k];
+     if(cv&&cv.x&&(!lv||(cv.t||0)>(lv.t||0))){loc[k]=cv;ch=true;}}
+    if(ch)localStorage.setItem(AIEK,JSON.stringify(loc));
+   }catch(e){}
+  });
+ }catch(e){}
+}
+aiExpCloudPull();
 function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function aiExpShow(body,key,c){
  body.classList.add('show');
@@ -1467,6 +1497,8 @@ setNav();
 .ai-exp-bar{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--mut)}
 .ai-exp-bar .ai-pick{margin-left:auto;flex:none}
 .ai-row-btn svg{vertical-align:-3px;margin-right:4px}
+.ai-panel-body{font-size:15px;line-height:1.95}
+.ai-panel-body h4{font-size:17px}
 </style>
 </body>
 </html>
