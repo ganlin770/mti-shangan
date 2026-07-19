@@ -981,7 +981,13 @@ render=function(){
 var AI_SPARK='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4a6.1 6.1 0 0 0-3.6 11.1c.4.3.6.7.6 1.1h6c0-.4.2-.8.6-1.1A6.1 6.1 0 0 0 12 3.4Z"/><path d="M9.6 18.3h4.8M10.7 20.9h2.6"/><path d="m12 7.5.78 1.92 1.92.78-1.92.78L12 12.9l-.78-1.92-1.92-.78 1.92-.78z"/></svg>';
 function aiQuizHide(){
  var p=document.getElementById('aiQuizPanel');
- if(!p||!p.classList.contains('show'))return;
+ if(!p)return;
+ if(window.matchMedia&&window.matchMedia('(min-width:900px)').matches){
+  if(aiBusy&&aiAbort){try{aiAbort.abort();}catch(e){}}
+  var bd=document.getElementById('aiQuizBody');if(bd){bd.innerHTML='';bd.classList.remove('show');}
+  return;
+ }
+ if(!p.classList.contains('show'))return;
  p.classList.remove('show');
  if(aiBusy&&aiAbort){try{aiAbort.abort();}catch(e){}}
  var b=document.getElementById('aiQuizBody');if(b){b.innerHTML='';b.classList.remove('show');}
@@ -995,15 +1001,16 @@ openQuiz=function(ty){
   var btn=document.createElement('button');
   btn.id='aiQuizBtn';btn.className='ai-quiz-btn';btn.type='button';
   btn.innerHTML=AI_SPARK+'<span>AI 讲解这张卡</span>';
-  btn.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60';
+  /* 定位交给 CSS：小屏=底部悬浮 / 桌面=左栏（split-layout v1）*/
   var panel=document.createElement('div');
   panel.id='aiQuizPanel';panel.className='ai-quiz-panel framed';
   panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div>';
-  panel.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:64px;width:min(680px,92vw);z-index:60;box-shadow:0 18px 40px rgba(40,35,20,.25)';
+  /* 定位交给 CSS：小屏=底部弹出 / 桌面=左栏常驻（split-layout v1）*/
   ovl.appendChild(panel);ovl.appendChild(btn);
   var body=panel.querySelector('#aiQuizBody');
   panel.querySelector('#aiQuizX').addEventListener('click',function(ev){ev.stopPropagation();aiQuizHide();});
   ovl.addEventListener('click',function(ev){
+   if(window.matchMedia&&window.matchMedia('(min-width:900px)').matches)return;
    if(!panel.classList.contains('show'))return;
    if(panel.contains(ev.target)||btn.contains(ev.target))return;
    aiQuizHide();
@@ -1061,6 +1068,7 @@ openQuiz=function(ty){
 var _qzRenderQuiz=renderQuiz;
 renderQuiz=function(){
  var r=_qzRenderQuiz.apply(this,arguments);
+ var _qb=document.getElementById('aiQuizBtn');if(_qb)_qb.disabled=qi>=queue.length;
  if(tdQzActive&&st.daily&&st.daily.qzMap){
   var S=st.daily.qzMap[tdQzActive.sig];
   if(S){
@@ -1369,5 +1377,33 @@ render=function(){
 setNav();
 })();
 </script>
+<style id="split-layout-v1">
+/* ========== 抽背两栏满屏布局 · split-layout v1 ==========
+   桌面 >=900px：#ovl 打开 -> 两栏 Grid 铺满（左 AI 讲解常驻 / 右 背诵卡）
+   小屏  <900px：完全回退现状（底部悬浮按钮 + 底部弹出面板）
+   仅用站内变量（--paper/--card/--line/--green/--green2/--mut），无新配色
+   置于尾部：不改动 <head> 与巨型数据行，选择器 ID/.ovl.on 高特异性稳压 head 规则
+   ======================================================= */
+@media (max-width:899.98px){
+  #aiQuizBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60}
+  #aiQuizPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:64px;width:min(680px,92vw);z-index:60;box-shadow:0 18px 40px rgba(40,35,20,.25)}
+}
+@media (min-width:900px){
+  .ovl.on{display:grid;grid-template-columns:minmax(340px,40%) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;align-items:stretch;justify-items:stretch;gap:14px 22px;padding:26px 30px}
+  #aiQuizPanel{position:static;left:auto;bottom:auto;transform:none;width:auto;margin:0;grid-column:1;grid-row:1;align-self:stretch;justify-self:stretch;display:flex;flex-direction:column;min-height:0;height:100%;max-height:none;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.18);overflow:hidden}
+  #aiQuizPanel .ai-panel-body{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
+  #aiQuizBody{display:block}
+  #aiQuizBody:empty::before{content:'点下方按钮，AI 帮你拆解这张卡的考点与记忆钩子';display:block;color:var(--mut);font-size:13px;line-height:1.85;opacity:.9}
+  #aiQuizBtn{position:static;left:auto;bottom:auto;transform:none;margin-top:0;grid-column:1;grid-row:2;justify-self:stretch;display:inline-flex;justify-content:center;background:var(--green);border:1px solid var(--green);color:#f3efe6;-webkit-backdrop-filter:none;backdrop-filter:none;padding:12px 16px;font-size:13.5px;box-shadow:0 8px 20px rgba(46,74,56,.22)}
+  #aiQuizBtn:hover{background:var(--green2);border-color:var(--green2);box-shadow:0 10px 24px rgba(46,74,56,.30)}
+  #aiQuizBtn:active{background:var(--green)}
+  #aiQuizBtn svg{color:#f3efe6;opacity:.95}
+  #quizbox{grid-column:2;grid-row:1 / 3;align-self:stretch;justify-self:stretch;width:auto;max-width:none;margin:0;max-height:100%;overflow-y:auto;display:flex;flex-direction:column;justify-content:center}
+  .ovl.on #quizbox>*{flex:none}
+  .ovl.on .qcard{height:clamp(440px,56vh,560px)}
+  .qclose{z-index:70}
+}
+.ai-quiz-btn:disabled{opacity:.45;cursor:default;pointer-events:none}
+</style>
 </body>
 </html>
