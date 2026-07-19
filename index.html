@@ -653,7 +653,7 @@ function aiStream(userText,target,onDone){
  fetch(aiBase()+'/v1/chat/completions',{
   method:'POST',signal:aiAbort.signal,
   headers:{'content-type':'application/json','authorization':'Bearer '+aiCfg.key},
-  body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:2600,
+  body:JSON.stringify({model:aiCfg.model,stream:true,max_tokens:3400,
    messages:[{role:'system',content:aiSys()},{role:'user',content:userText}]})
  }).then(function(r){
   if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});
@@ -690,8 +690,27 @@ function aiDefaultPsg(){
  return 0;
 }
 function aiCardPrompt(x){
- return '讲解这张备考卡片，帮我彻底记住。类型：'+x.type+'；题目：'+x.q+'；答案：'+x.a+(x.m?'；已有助记：'+x.m:'')
-  +'。请给：1) 一句话核心记忆点；2) 易混项辨析；3) 出题角度（会怎么考）；4) 一个新的记忆钩子。全文 200 字以内。';
+ var base='深度讲解这张备考卡片，帮我一次吃透、考场不丢分。卡片类型：'+x.type+'；题目：'+x.q+'；标准答案：'+x.a+(x.m?'；已有助记：'+x.m:'')+'。\n\n';
+ var spec;
+ if(x.type==='名解'){
+  spec='请严格按以下结构输出（### 小标题原样使用）：\n'
+   +'### 核心答案\n把标准答案扩写成可背诵的 120-180 字三段式（定义→背景→意义），考场可直接默写。\n'
+   +'### 采分点拆解\n- 按「定义3分/背景3分/意义4分」逐条列出阅卷给分点，**加粗**最容易漏的那一个\n'
+   +'### 延伸考点\n- 同主题最可能连环考的 2-3 个名解，各配一句极简核心答案\n- 这个知识点还可能出现的其他题型（选择/填空/大作文素材角度）\n'
+   +'### 记忆钩子\n用一句联想或口诀把定义-背景-意义串起来。\n'
+   +'全文 500-700 字。';
+ }else{
+  spec='请严格按以下结构输出（### 小标题原样使用）：\n'
+   +'### 译法与用法\n标准译法的词性与正式语境搭配、直译陷阱；缩略语给全称并逐词直译。\n'
+   +'### 逐词拆解\n- 按词根词缀/构词法拆每个实词，标注词源或联想画面\n'
+   +'### 易混辨析\n- 与 1-2 个最易搞混的词条/近义表达对比，各给一句判别口诀\n'
+   +'### 考点预判\n- 这张卡最可能怎么考（英译汉还是汉译英、考不考全称、常见变形），以及判分的得分/失分边界\n'
+   +'### 同主题联动\n- 3-5 个高频关联词条，英汉对照，优先近年时政热点\n'
+   +'### 记忆钩子\n一个新的谐音/画面/词源故事，一句话记住。\n'
+   +'### 真题例句\n1 句考研难度英文例句+中译，把本词条放进真实语境。\n'
+   +'全文 600-900 字。';
+ }
+ return base+spec+'\n排版铁律：只用 ### 小标题、**粗体**、「- 」无序列表；禁用表格/代码块/引用块/#与##标题/有序列表。所有内容必须具体到词句、可背诵可落笔，不写「多积累」式空话。';
 }
 
 /* ---- 视图 ---- */
@@ -1404,6 +1423,9 @@ setNav();
   .qclose{z-index:70}
 }
 .ai-quiz-btn:disabled{opacity:.45;cursor:default;pointer-events:none}
+.qclose{top:16px;right:18px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:300;line-height:1;color:rgba(255,255,255,.92);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:50%;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .18s,transform .18s;user-select:none}
+.qclose:hover{background:rgba(255,255,255,.24);transform:rotate(90deg)}
+.qclose:active{transform:rotate(90deg) scale(.92)}
 </style>
 </body>
 </html>
