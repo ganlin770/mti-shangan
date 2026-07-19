@@ -559,20 +559,37 @@ function aiFeedbackShow(ok){
  return ok;
 }
 /* ---- 标准发音：有道词典语音接口（免费无Key，type=1英音/2美音），浏览器 TTS 兜底 ---- */
-var aiAudioEl=null;
+var aiAudioEl=null;var aiSpkSeq=0;
 function aiSpkOk(t){return /[A-Za-z]{2}/.test(String(t||''));}
 function aiSpeak(t,acc){
  t=String(t||'').replace(/（[^）]*）|\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();
  if(!t)return;
- if(!aiAudioEl)aiAudioEl=new Audio();
+ var seq=++aiSpkSeq;
+ try{speechSynthesis.cancel();}catch(e){}
+ if(!aiAudioEl){aiAudioEl=new Audio();try{aiAudioEl.setAttribute('referrerpolicy','no-referrer');}catch(e){}}
  var a=aiAudioEl;
+ /* 三级降级：有道词典音(词库命中制,长句500) -> 自建网关/tts句子TTS(任意长句,边缘缓存) -> 系统TTS */
+ var srcs=[
+  'https://dict.youdao.com/dictvoice?type='+(acc==='uk'?1:2)+'&audio='+encodeURIComponent(t.slice(0,600)),
+  aiBase()+'/tts?acc='+(acc==='uk'?'uk':'en')+'&text='+encodeURIComponent(t.slice(0,600))
+ ];
+ var i=0;
+ function nx(){
+  if(seq!==aiSpkSeq)return;
+  if(i>=srcs.length){
+   try{var u=new SpeechSynthesisUtterance(t);u.lang=acc==='uk'?'en-GB':'en-US';u.rate=.95;
+    speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
+   return;
+  }
+  a.src=srcs[i++];
+  var p=a.play();
+  if(p&&p.catch)p.catch(function(e){
+   if(e&&e.name==='AbortError')return;
+   nx();
+  });
+ }
  try{a.pause();}catch(e){}
- a.src='https://dict.youdao.com/dictvoice?type='+(acc==='uk'?1:2)+'&audio='+encodeURIComponent(t);
- var p=a.play();
- if(p&&p.catch)p.catch(function(){
-  try{var u=new SpeechSynthesisUtterance(t);u.lang=acc==='uk'?'en-GB':'en-US';
-   speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
- });
+ nx();
 }
 var AI_SPKI='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6.5 8.5H3.5v7h3L11 19z" fill="currentColor" stroke="none"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M17.8 6.2a8 8 0 0 1 0 11.6"/></svg>';
 function aiSpkHtml(t){
