@@ -843,11 +843,8 @@ document.addEventListener('click',function(ev){
 var AI_WTYPES=[['speech','应用文 · 演讲稿'],['letter','应用文 · 商务信函'],['notice','应用文 · 通知'],['ad','应用文 · 广告'],['manual','应用文 · 说明书'],['report','应用文 · 报告'],['essay448','448 大作文'],['essay211','211 英语作文']];
 function aiWTypeLabel(){for(var i=0;i<AI_WTYPES.length;i++)if(AI_WTYPES[i][0]===aiWType)return AI_WTYPES[i][1];return aiWType;}
 
-function aiView(){
- if(aiPsg<0)aiPsg=aiDefaultPsg();
- if(!aiItem&&(aiMode==='ci'||aiMode==='ms'))aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
- if(!aiVItem)aiVItem=aiDrawV();
- var h='<div class="ai-wrap">';
+function aiSetupHtml(){
+ var h='';
  if(aiOk()&&!aiSetupOpen){
   h+='<div class="ai-setup ai-setup--slim"><span class="ai-slim-dot"></span><span>已连接自建网关</span><b>'+esc(aiModelLabel())+'</b>'+(aiCfg.fast?'<span class="ai-slim-fast">⚡ 极速判分</span>':'')+'<button class="ai-pick" id="aiCfgEdit">修改设置</button></div>';
  }else{
@@ -860,6 +857,14 @@ function aiView(){
   +'<label class="ai-fastopt"><input type="checkbox" id="aiFast"'+(aiCfg.fast?' checked':'')+'> ⚡ 极速判分：词条 / 词汇判定自动用 Haiku（快 3-5 倍），翻译写作批改与讲解仍用上面所选模型</label>'
   +'<div class="ai-hint">Key 仅保存在<b>本机浏览器</b>，不会出现在网页源码或仓库里。建议在网关控制台为本站单独创建一把 Key（可独立统计、随时吊销）。批改类任务建议用 <b>Opus</b>，快问快答用 <b>Haiku</b>。'+(aiOk()?' <button class="ai-pick" id="aiCfgClose" style="margin-left:6px">收起 ▲</button>':'')+'</div></div>';
  }
+ return h;
+}
+function aiView(){
+ if(aiPsg<0)aiPsg=aiDefaultPsg();
+ if(!aiItem&&(aiMode==='ci'||aiMode==='ms'))aiItem=aiDraw(aiMode==='ms'?'名解':'词条');
+ if(!aiVItem)aiVItem=aiDrawV();
+ var h='<div class="ai-wrap">';
+ h+='<div id="aiSetupBox">'+aiSetupHtml()+'</div>';
  h+='<div class="ai-modes">'+[['today','📅 今日特训'],['trans','📝 真题翻译批改'],['ci','🎯 词条陪练'],['ms','📚 名解批改'],['write','✍️ 写作批改'],['free','💬 自由问答']].map(function(m){
    return '<button class="ai-mode'+(aiMode===m[0]?' on':'')+'" data-m="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div>';
  h+=aiTaskHtml();
@@ -963,7 +968,11 @@ function aiPrompt(userText){
  return userText;
 }
 
-function bindAI(){
+function aiSetupRerender(){
+ var b=document.getElementById('aiSetupBox');if(!b)return;
+ b.innerHTML=aiSetupHtml();bindAISetup();
+}
+function bindAISetup(){
  var $=function(id){return document.getElementById(id);};
  var _u=$('aiUrl');if(_u)_u.addEventListener('change',function(){aiCfg.url=this.value.trim();aiSave();});
  var _k=$('aiKey');if(_k)_k.addEventListener('change',function(){aiCfg.key=this.value.trim();aiSave();});
@@ -973,12 +982,16 @@ function bindAI(){
   var s=$('aiStatus');s.className='ai-status';s.textContent='测试中…';
   fetch(aiBase()+'/v1/models',{headers:{authorization:'Bearer '+aiCfg.key}}).then(function(r){
    if(!r.ok)throw new Error('HTTP '+r.status);return r.json();
-  }).then(function(d){var n=(d.data||d.models||[]).length;s.className='ai-status ok';s.textContent='✓ 已连通，网关开放 '+n+' 个模型，Key 有效。';setTimeout(function(){if(cur==='ai'&&aiOk()){aiSetupOpen=false;aiRefresh();}},900);})
+  }).then(function(d){var n=(d.data||d.models||[]).length;s.className='ai-status ok';s.textContent='✓ 已连通，网关开放 '+n+' 个模型，Key 有效。';setTimeout(function(){if(cur==='ai'&&aiOk()){aiSetupOpen=false;aiSetupRerender();}},900);})
   .catch(function(e){s.className='ai-status err';s.textContent='✗ 连接失败：'+e.message+'（检查地址 / Key）';});
  });
  var ff=$('aiFast');if(ff)ff.addEventListener('change',function(){aiCfg.fast=this.checked;aiSave();});
- var ce=$('aiCfgEdit');if(ce)ce.addEventListener('click',function(){aiSetupOpen=true;aiRefresh();});
- var cc=$('aiCfgClose');if(cc)cc.addEventListener('click',function(){aiSetupOpen=false;aiRefresh();});
+ var ce=$('aiCfgEdit');if(ce)ce.addEventListener('click',function(){aiSetupOpen=true;aiSetupRerender();});
+ var cc=$('aiCfgClose');if(cc)cc.addEventListener('click',function(){aiSetupOpen=false;aiSetupRerender();});
+}
+function bindAI(){
+ var $=function(id){return document.getElementById(id);};
+ bindAISetup();
  var srct=$('aiSrcT');if(srct)srct.addEventListener('click',function(){aiSrcOpen=!aiSrcOpen;var s=$('aiSrc');if(s)s.classList.toggle('open',aiSrcOpen);this.textContent=aiSrcOpen?'收起原文 ▲':'展开全文 ▼';});
  document.querySelectorAll('.ai-mode').forEach(function(b){b.addEventListener('click',function(){
   if(aiBusy&&aiAbort)aiAbort.abort();
