@@ -609,6 +609,44 @@ document.addEventListener('click',function(ev){
 });
 /* 覆盖原站 speak：抽背卡等全站发音统一走有道词典标准音（TTS 自动兜底）*/
 speak=function(t){var s=String(t||'').trim();if(s)aiSpeak(s,'us');};
+/* ---- 划词朗读：选中含英文的文本，选区旁浮出小喇叭，点击即读（复用三级发音链）---- */
+var aiSelBtn=null,aiSelT=null;
+function aiSelHide(){if(aiSelBtn)aiSelBtn.classList.remove('show');}
+function aiSelCheck(){
+ var ae=document.activeElement;
+ if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return aiSelHide();
+ var sel=window.getSelection();
+ if(!sel||sel.isCollapsed||!sel.rangeCount)return aiSelHide();
+ var t=sel.toString().trim();
+ if(!t||t.length>320||!/[A-Za-z]{2}/.test(t))return aiSelHide();
+ var r=sel.getRangeAt(0).getBoundingClientRect();
+ if(!r||(!r.width&&!r.height))return aiSelHide();
+ if(!aiSelBtn){
+  aiSelBtn=document.createElement('button');
+  aiSelBtn.id='aiSelSpk';aiSelBtn.type='button';
+  aiSelBtn.innerHTML=AI_SPKI;
+  aiSelBtn.setAttribute('aria-label','朗读选中内容');
+  aiSelBtn.setAttribute('title','朗读选中内容');
+  document.body.appendChild(aiSelBtn);
+  aiSelBtn.addEventListener('mousedown',function(ev){ev.preventDefault();ev.stopPropagation();});
+  aiSelBtn.addEventListener('click',function(ev){
+   ev.stopPropagation();
+   var s=window.getSelection();var txt=s?String(s).trim():'';
+   if(txt)aiSpeak(txt,'us');
+  });
+ }
+ var x=Math.min(window.innerWidth-44,r.right+6);
+ if(x<6)x=6;
+ var y=r.top-40;
+ if(y<6)y=r.bottom+8;
+ aiSelBtn.style.left=x+'px';aiSelBtn.style.top=y+'px';
+ aiSelBtn.classList.add('show');
+}
+document.addEventListener('selectionchange',function(){
+ if(aiSelT)clearTimeout(aiSelT);
+ aiSelT=setTimeout(aiSelCheck,180);
+});
+window.addEventListener('scroll',aiSelHide,true);
 
 /* ---- 标准答案条（判分瞬间先给答案，AI 解释在下方流式输出）---- */
 function aiAnswerHtml(){
@@ -1709,6 +1747,11 @@ setNav();
 .ret-foot{padding:10px 16px;font-size:12px;color:var(--mut);border-top:1px solid var(--line)}
 .ffb:not(.msmid):not(.mslong){align-items:center;justify-content:center}
 .ffb:not(.msmid):not(.mslong) .anbig{text-align:center;width:auto;max-width:94%;font-size:22px;line-height:1.6}
+#aiSelSpk{position:fixed;z-index:120;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--green2);cursor:pointer;box-shadow:0 6px 18px rgba(40,35,20,.22);opacity:0;transform:scale(.7);pointer-events:none;transition:opacity .15s,transform .15s}
+#aiSelSpk.show{opacity:1;transform:scale(1);pointer-events:auto}
+#aiSelSpk:hover{background:var(--green);color:#f3efe6;border-color:var(--green)}
+#aiSelSpk:active{transform:scale(.92)}
+#aiSelSpk svg{width:16px;height:16px}
 </style>
 </body>
 </html>
