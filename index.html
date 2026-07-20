@@ -826,6 +826,48 @@ document.addEventListener('keydown',function(ev){
  ev.preventDefault();ev.stopPropagation();
  var p=tg.closest('.ai-quiz-panel');if(p)aiAskGo(p);
 });
+/* ==== 永久掌握（退休卡）：ret:1+百年due，退出一切复习；可撤销/可恢复 ==== */
+var aiRetLast=null;var aiRetT=null;
+function aiRetire(key){
+ if(!key)return;
+ st.srs[key]={l:7,due:Date.now()+3155760000000,lapse:0,ret:1};
+ if(st.daily&&st.daily.qzMap){for(var s in st.daily.qzMap){var S=st.daily.qzMap[s];if(!S||!S.keys)continue;
+  var i=S.keys.indexOf(key);if(i>=0){S.keys.splice(i,1);if(i<S.pos)S.pos--;if(S.pos>S.keys.length)S.pos=S.keys.length;}}}
+ save();
+}
+function aiUnretire(key){st.srs[key]={l:4,due:Date.now()+2592000000,lapse:0};save();}
+function aiRetCount(){var n=0;for(var k in st.srs)if(st.srs[k]&&st.srs[k].ret)n++;return n;}
+function aiRetireWithToast(x){
+ aiRetLast={key:x.key,prev:st.srs[x.key]?JSON.parse(JSON.stringify(st.srs[x.key])):null};
+ aiRetire(x.key);
+ var t=document.getElementById('aiRetToast');
+ if(!t){t=document.createElement('div');t.id='aiRetToast';document.body.appendChild(t);
+  t.addEventListener('click',function(){
+   if(!aiRetLast)return;
+   if(aiRetLast.prev)st.srs[aiRetLast.key]=aiRetLast.prev;else delete st.srs[aiRetLast.key];
+   save();aiRetLast=null;this.classList.remove('show');
+   if(cur==='today')tdRefreshLite();
+  });}
+ t.innerHTML='🏆 「'+esc(x.q)+'」已永久掌握，不再复习 · <b>点此撤销</b>';
+ t.classList.add('show');
+ if(aiRetT)clearTimeout(aiRetT);
+ aiRetT=setTimeout(function(){t.classList.remove('show');aiRetLast=null;},6000);
+}
+function aiRetMgrShow(){
+ var old=document.getElementById('retMgr');if(old)old.remove();
+ var list=POOL.filter(function(x){return st.srs[x.key]&&st.srs[x.key].ret;});
+ var m=document.createElement('div');m.id='retMgr';
+ var rows=list.map(function(x){return '<div class="ret-row"><span class="ret-q">'+esc(x.q)+'</span><small>'+esc(x.type)+'</small><button type="button" class="ai-pick ret-undo" data-k="'+esc(x.key).replace(/"/g,'&quot;')+'">恢复复习</button></div>';}).join('')||'<div class="ret-empty">还没有永久掌握的卡</div>';
+ m.innerHTML='<div class="ret-box"><div class="ret-head"><b>🏆 永久掌握清单（'+list.length+' 张）</b><button type="button" class="ai-panel-x" id="retMgrX">&times;</button></div><div class="ret-list">'+rows+'</div><div class="ret-foot">恢复后按「已掌握」等级排期，约 30 天后重新出现在复习里</div></div>';
+ document.body.appendChild(m);
+ m.addEventListener('click',function(ev){
+  var tg=ev.target;
+  if(tg.id==='retMgrX'||tg===m){m.remove();if(cur==='today'){tdEnsure();tdRefreshLite();}return;}
+  var u=tg.closest?tg.closest('.ret-undo'):null;
+  if(u){aiUnretire(u.getAttribute('data-k'));var r=u.closest('.ret-row');if(r)r.remove();
+   var hb=m.querySelector('.ret-head b');if(hb)hb.textContent='🏆 永久掌握清单（'+aiRetCount()+' 张）';}
+ });
+}
 function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function aiExpShow(body,key,c){
  body.classList.add('show');
@@ -875,7 +917,7 @@ function aiView(){
  h+='<div class="ai-answer" id="aiAnswer"></div>';
  h+='<div class="ai-out" id="aiOut"></div>';
  h+='<div class="ai-feedback" id="aiFeedback"></div>';
- h+='<div class="ai-mark" id="aiMark"><span>把这题记入记忆系统：</span><button class="yes2" id="aiMarkYes">✓ 会了</button><button class="no2" id="aiMarkNo">✗ 记入错题</button><i id="aiMarkMsg"></i></div>';
+ h+='<div class="ai-mark" id="aiMark"><span>把这题记入记忆系统：</span><button class="yes2" id="aiMarkYes">✓ 会了</button><button class="no2" id="aiMarkNo">✗ 记入错题</button><button class="ret2" id="aiMarkRet">🏆 永久掌握</button><i id="aiMarkMsg"></i></div>';
  h+='<div class="ai-next-bar" id="aiNextBar"></div>';
  h+='<div class="ai-foot" id="aiFoot"></div></div>';
  return h;
@@ -1029,6 +1071,15 @@ function bindAI(){
  }
  if(my)my.addEventListener('click',function(){aiMark(true);});
  if(mn)mn.addEventListener('click',function(){aiMark(false);});
+ var mr=$('aiMarkRet');
+ if(mr)mr.addEventListener('click',function(){
+  if(!aiItem||!aiItem.key)return;
+  aiRetireWithToast(aiItem);
+  var msg=$('aiMarkMsg');if(msg)msg.textContent='已永久掌握，不再进入复习';
+  if(my)my.disabled=true;if(mn)mn.disabled=true;this.disabled=true;
+  var nb=document.getElementById('aiNextBar');
+  if(nb&&!nb.classList.contains('show'))aiNextBar('<button type="button" class="ai-send" id="aiNextCard">下一题 →</button><span class="ai-nb-tip">解析看完再走</span>');
+ });
  function aiShowMark(verdict){
   if(!(aiItem&&aiItem.key&&(aiMode==='ms'||(aiMode==='ci'&&aiCiSrc==='ci'))))return;
   var mk=document.getElementById('aiMark');if(!mk)return;
@@ -1247,7 +1298,14 @@ renderQuiz=function(){
  if(_qb){_qb.disabled=qi>=queue.length;
   var _qx=queue[qi];var _qs=_qb.querySelector('span');
   if(_qs)_qs.textContent=(_qx&&aiExpGet(_qx.key))?'查看讲解（已保存）':'AI 讲解这张卡';}
- if(qi<queue.length){var _mx=queue[qi];if(_mx&&_mx.type==='名解'&&typeof MN!=='undefined'&&MN[_mx.q]){var _fb=document.querySelector('#qc .ffb');if(_fb&&!_fb.querySelector('.mn-line')){var _d=document.createElement('div');_d.className='maid mn-line';_d.textContent='🪄 口诀 · '+MN[_mx.q];_fb.appendChild(_d);}}}
+ if(qi<queue.length){var _mx=queue[qi];if(_mx&&_mx.type==='名解'&&typeof MN!=='undefined'&&MN[_mx.q]){var _fb=document.querySelector('#qc .ffb');if(_fb&&!_fb.querySelector('.mn-line')){var _d=document.createElement('div');_d.className='maid mn-line';_d.textContent='🪄 口诀 · '+MN[_mx.q];_fb.appendChild(_d);}}
+  var _bt=document.querySelector('#quizbox .qbtns');
+  if(_bt&&!document.querySelector('#quizbox .qret-row')){
+   var _rw=document.createElement('div');_rw.className='qret-row';
+   var _rb=document.createElement('button');_rb.type='button';_rb.className='qret';_rb.textContent='🏆 这张已彻底记住，永不再考';
+   _rb.onclick=function(){var x=queue[qi];if(!x)return;aiRetireWithToast(x);qi++;renderQuiz();};
+   _rw.appendChild(_rb);_bt.insertAdjacentElement('afterend',_rw);
+  }}
  if(tdQzActive&&st.daily&&st.daily.qzMap){
   var S=st.daily.qzMap[tdQzActive.sig];
   if(S){
@@ -1512,6 +1570,8 @@ function tdView(){
  h+='</div>';
  var t=TECH[tdDayNum()%TECH.length];
  h+='<div class="td-tech"><span class="pl" style="margin:0">今日一技 · 翻译/写作技巧轮读</span><b>'+esc(t[0])+'</b><small>'+esc(t[1])+'</small></div>';
+ var _rc=aiRetCount();
+ if(_rc>0)h+='<div class="td-retrow">🏆 已永久掌握 <b>'+_rc+'</b> 张（不再进入复习）<button type="button" class="ai-pick" id="tdRetMgr">管理 / 恢复</button></div>';
  h+='<div class="td-sumbox"><button class="ai-send" id="tdBtnSum"'+(aiBusy?' disabled':'')+'>'+(doneN===total?'🌙 AI 总结今天':'AI 总结今天（未全清也可）')+'</button><div class="ai-out" id="tdSum"'+(D.sum?' style="display:block"':'')+'>'+(D.sum?aiMd(D.sum):'')+'</div></div>';
  h+='</div>';
  return h;
@@ -1527,6 +1587,7 @@ function bindTd(){
  b=g('tdCkListen');if(b)b.addEventListener('change',function(){tdEnsure();st.daily.done.listen=this.checked?1:0;save();tdRefreshLite();});
  b=g('tdNote');if(b)b.addEventListener('change',function(){tdEnsure();st.daily.note=this.value.trim();st.daily.done.note=st.daily.note?1:0;save();tdRefreshLite();});
  b=g('tdBtnSum');if(b)b.addEventListener('click',tdSummary);
+ b=g('tdRetMgr');if(b)b.addEventListener('click',aiRetMgrShow);
 }
 function tdRefreshLite(){
  if(cur!=='today')return;
@@ -1627,6 +1688,25 @@ setNav();
 .spk:hover{background-color:rgba(255,255,255,.30)}
 .ai-spk{display:inline-flex;align-items:center;gap:4px}
 .ai-spk svg{flex:none}
+.qret-row{display:flex;justify-content:center;margin:2px 0 10px}
+.qret{border:1px dashed rgba(146,116,40,.55);background:rgba(196,158,66,.10);color:#8a6d1f;border-radius:999px;padding:7px 18px;font-size:12.5px;cursor:pointer;font-family:inherit;transition:.15s}
+.qret:hover{background:rgba(196,158,66,.20)}
+.ret2{border:1px dashed rgba(146,116,40,.55);background:rgba(196,158,66,.10);color:#8a6d1f;border-radius:9px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.ret2:disabled{opacity:.5;cursor:default}
+#aiRetToast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-160%);z-index:99;background:var(--green);color:#f3efe6;padding:10px 18px;border-radius:12px;font-size:13.5px;box-shadow:0 12px 30px rgba(46,74,56,.35);cursor:pointer;transition:transform .25s;max-width:92vw}
+#aiRetToast.show{transform:translateX(-50%) translateY(0)}
+#aiRetToast b{text-decoration:underline}
+.td-retrow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.td-retrow b{color:#8a6d1f}
+#retMgr{position:fixed;inset:0;background:rgba(40,34,24,.5);z-index:98;display:flex;align-items:center;justify-content:center;padding:20px}
+.ret-box{background:var(--paper);border-radius:16px;width:min(560px,94vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.3)}
+.ret-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.ret-list{overflow-y:auto;padding:6px 16px}
+.ret-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.ret-q{flex:1;font-size:14px}
+.ret-row small{color:var(--mut)}
+.ret-empty{color:var(--mut);padding:26px 0;text-align:center}
+.ret-foot{padding:10px 16px;font-size:12px;color:var(--mut);border-top:1px solid var(--line)}
 </style>
 </body>
 </html>
