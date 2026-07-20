@@ -982,13 +982,13 @@ function aiTaskHtml(){
     +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下词性和中文意思，AI 判分并给词根助记、同近义辨析。"></textarea>'
     +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
   }else{
-   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">词条陪练 · 优先抽到期/错题</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
+   h+='<div class="ai-task-meta"><span class="pl" style="margin:0">'+(tdSession&&tdSession.task==='gt'&&st.daily&&st.daily.gt?'🌙 晚间过关 · 第 '+(st.daily.gt.pos+1)+' / '+st.daily.gt.list.length+' 题':'词条陪练 · 优先抽到期/错题')+'</span>'+pills+'<button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
     +'<div class="ai-q">请给出英译/全称：<b>'+esc(aiItem.q)+'</b>'+(aiSpkOk(aiItem.q)?aiSpkHtml(aiItem.q):'')+'</div>'
     +'<div class="ai-input-row"><textarea id="aiInput" rows="3" placeholder="写下你的答案，AI 严格判分并给记忆钩子。判分后可一键记入记忆系统。"></textarea>'
     +'<div class="ai-actions"><button class="ai-send" id="aiSend">判分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
   }
  }else if(aiMode==='ms'){
-  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">448 名解批改 · 三段式</span><button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
+  h+='<div class="ai-task-meta"><span class="pl" style="margin:0">'+(tdSession&&tdSession.task==='gt'&&st.daily&&st.daily.gt?'🌙 晚间过关 · 第 '+(st.daily.gt.pos+1)+' / '+st.daily.gt.list.length+' 题':'448 名解批改 · 三段式')+'</span><button class="ai-pick" id="aiNext">🎲 换一题</button></div>'
    +'<div class="ai-q">名词解释：<b>'+esc(aiItem.q)+'</b></div>'
    +'<div class="ai-input-row"><textarea id="aiInput" rows="6" placeholder="按「定义 → 背景 → 意义」写 150-200 字，AI 按采分点打分。判分后可一键记入记忆系统。"></textarea>'
    +'<div class="ai-actions"><button class="ai-send" id="aiSend">按采分点打分</button><button class="ai-stop" id="aiStop">停止</button></div></div>';
@@ -1119,6 +1119,7 @@ function bindAI(){
   if(nb&&!nb.classList.contains('show'))aiNextBar('<button type="button" class="ai-send" id="aiNextCard">下一题 →</button><span class="ai-nb-tip">解析看完再走</span>');
  });
  function aiShowMark(verdict){
+  if(tdSession&&tdSession.task==='gt')return;
   if(!(aiItem&&aiItem.key&&(aiMode==='ms'||(aiMode==='ci'&&aiCiSrc==='ci'))))return;
   var mk=document.getElementById('aiMark');if(!mk)return;
   mk.classList.add('show');
@@ -1423,7 +1424,16 @@ function tdStartWrite(){tdEnsure();var D=st.daily;tdSession={task:'write'};aiMod
 function tdStartDrill(){tdEnsure();tdSession={task:'drill'};aiMode='ci';aiCiSrc='ci';aiItem=aiDraw('词条');go('ai');}
 function tdOnJudged(v,text){
  tdEnsure();var D=st.daily;
- if(aiMode==='trans'&&text&&+aiPsg===+D.psg){
+ if(tdSession&&tdSession.task==='gt'&&(aiMode==='ci'||aiMode==='ms')&&aiItem&&D.gt&&!D.gt.done&&D.gt.list[D.gt.pos]===aiItem.key&&v!==null){
+  grade(aiItem.key,!!v);
+  if(v)D.gt.ok++;else D.gt.wrong++;
+  D.gt.pos++;
+  if(D.gt.pos>=D.gt.list.length){D.gt.done=1;tdSession=null;save();
+   aiNextBar('<span class="ai-nb-done">🎉 今日过关 '+D.gt.ok+'/'+D.gt.list.length+(D.gt.wrong?'（错 '+D.gt.wrong+' 已回炉错题本）':' 全对！')+'</span><button type="button" class="ai-send" id="aiGtSum">去 AI 复盘 →</button>');
+  }else{save();
+   aiNextBar('<button type="button" class="ai-send" id="aiGtNext">下一题 →（过关 '+(D.gt.pos+1)+'/'+D.gt.list.length+'）</button><span class="ai-nb-tip">判定已自动回写记忆曲线，答错的进错题本</span>');
+  }
+ }else if(aiMode==='trans'&&text&&+aiPsg===+D.psg){
   if(!D.done.trans){D.done.trans=1;save();tdChainAdvance();}
  }else if(aiMode==='write'&&text){
   if(!D.done.write){D.done.write=1;save();tdChainAdvance();}
@@ -1478,7 +1488,48 @@ document.addEventListener('click',function(ev){
  if(tg.closest('#aiNextTask')){var nx=tdNextTask();if(nx)tdChainGo(nx);else{aiMode='today';aiRefresh();}return;}
  if(tg.closest('#aiGoSum')){aiChain=false;aiMode='today';aiRefresh();if(!aiBusy)tdSummary();return;}
  if(tg.closest('#aiBackToday')){aiMode='today';aiRefresh();return;}
+ if(tg.closest('#aiGtNext')){tdGtNext();return;}
+ if(tg.closest('#aiGtSum')){aiMode='today';aiRefresh();if(!aiBusy)tdSummary();return;}
 });
+/* ==== 晚间过关测验：把今天答过的卡再考一遍（错题全部+抽查5），全对=今日过关 ==== */
+function aiTdTodayStat(){
+ var today=ds(new Date());var seen={},n=0,wrong=0;
+ var L=st.log||[];
+ for(var i=L.length-1;i>=0;i--){var l=L[i];if(l.d!==today||l.ty==='词汇')continue;
+  var k=(l.ty==='名解'?'ms|':'ci|')+l.t;if(seen[k])continue;seen[k]=1;n++;if(!l.ok)wrong++;}
+ return {n:n,wrong:wrong};
+}
+function tdGtBuild(){
+ var today=ds(new Date());var seen={},wrong=[],right=[];
+ var L=st.log||[];
+ for(var i=L.length-1;i>=0;i--){
+  var l=L[i];if(l.d!==today||l.ty==='词汇')continue;
+  var k=(l.ty==='名解'?'ms|':'ci|')+l.t;
+  if(seen[k])continue;seen[k]=1;
+  if(!AIPOOL[k])continue;
+  if(st.srs[k]&&st.srs[k].ret)continue;
+  (l.ok?right:wrong).push(k);
+ }
+ function sh(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+ sh(right);
+ return sh(wrong.slice(0,12).concat(right.slice(0,5)));
+}
+function tdGtStart(){
+ tdEnsure();var D=st.daily;
+ if(!D.gt||D.gt.done){var l=tdGtBuild();if(!l.length)return;D.gt={list:l,pos:0,ok:0,wrong:0,done:0};save();}
+ tdGtNext();
+}
+function tdGtNext(){
+ tdEnsure();var D=st.daily;
+ if(!D.gt||D.gt.done)return;
+ var k=D.gt.list[D.gt.pos];var x=AIPOOL[k];
+ if(!x){D.gt.pos++;
+  if(D.gt.pos>=D.gt.list.length){D.gt.done=1;save();aiMode='today';if(cur==='ai')aiRefresh();return;}
+  save();return tdGtNext();}
+ tdSession={task:'gt'};
+ aiMode=x.type==='名解'?'ms':'ci';aiCiSrc='ci';aiItem=x;
+ if(cur==='ai')aiRefresh();else go('ai');
+}
 function aiChainBarHtml(){
  if(!aiChain)return '';
  var lb={vocab:'今日词汇',drill:'词条加练',trans:'真题翻译',write:'今日写作'};
@@ -1496,14 +1547,17 @@ function aiTdPanelHtml(){
  var h='<div class="ai-task ai-td">';
  h+='<div class="ai-td-head"><div class="ai-td-hb"><b>📅 '+esc(D.date)+' · 周'+dowN[dow]+' 特训</b><small>距初试 '+aiDays()+' 天 · AI 必练四项已完成 '+four+'/4'+(four===4?' · 全清 🎉':'')+'</small></div>'
   +(four<4?'<button class="ai-send" id="aiTdChain">▶ 一键连练四项</button>':'')+'</div>';
+ h+='<div class="ai-td-brief">📋 今天要练：<b>10</b> 词汇 · <b>'+D.drillGoal+'</b> 词条加练 · <b>1</b> 段翻译（'+esc(p.s+' '+p.d)+'）· <b>1</b> 篇写作（'+esc(D.wLabel)+'）· 复习清零 · <b>晚间过关</b></div>';
  h+='<div class="td-list">';
  h+='<div class="td-task'+(D.done.vocab?' ok':'')+'"><span class="td-check">'+(D.done.vocab?'✓':'')+'</span>'
   +'<div class="td-tb"><b>🔤 今日词汇 10 词</b><small>先扫一遍今日词表（点击听发音 · 悬停看释义 · 划线=已过），再去 AI 判分；答错自动排队尾</small>'
-  +'<div class="ai-td-chips">'+chips+'</div></div>'
+  +'<div class="ai-td-chips">'+chips+'</div>'
+  +'<div class="td-bar"><i style="width:'+(D.vDone*10)+'%"></i></div></div>'
   +'<span class="td-prog">'+D.vDone+'/10</span>'
   +(D.done.vocab?'':'<button class="td-go" id="aiTdVoc">'+(D.vDone>0?'继续练':'去判分')+'</button>')+'</div>';
  h+='<div class="td-task'+(D.done.drill?' ok':'')+'"><span class="td-check">'+(D.done.drill?'✓':'')+'</span>'
-  +'<div class="td-tb"><b>🎯 词条 AI 加练 '+D.drillGoal+' 题</b><small>优先抽错题与到期卡 · 判分自动回写艾宾浩斯曲线</small></div>'
+  +'<div class="td-tb"><b>🎯 词条 AI 加练 '+D.drillGoal+' 题</b><small>优先抽错题与到期卡 · 判分自动回写艾宾浩斯曲线</small>'
+  +'<div class="td-bar"><i style="width:'+Math.min(100,Math.round(D.drillCnt/Math.max(1,D.drillGoal)*100))+'%"></i></div></div>'
   +'<span class="td-prog">'+D.drillCnt+'/'+D.drillGoal+'</span>'
   +(D.done.drill?'':'<button class="td-go" id="aiTdDr">去加练</button>')+'</div>';
  h+='<div class="td-task'+(D.done.trans?' ok':'')+'"><span class="td-check">'+(D.done.trans?'✓':'')+'</span>'
@@ -1512,6 +1566,15 @@ function aiTdPanelHtml(){
  h+='<div class="td-task'+(D.done.write?' ok':'')+'"><span class="td-check">'+(D.done.write?'✓':'')+'</span>'
   +'<div class="td-tb"><b>✍️ 写作 · '+esc(D.wLabel)+'</b><small>'+esc(D.wReq||'按周轮换文体')+'</small></div>'
   +(D.done.write?'':'<button class="td-go" id="aiTdWr">去写作</button>')+'</div>';
+ var G=D.gt;var stat=aiTdTodayStat();
+ var gtSub=G&&G.done?('已过关 '+G.ok+'/'+G.list.length+(G.wrong?'（错 '+G.wrong+' 已回炉）':' · 全对 🎉')):(stat.n?('把今天答过的再考一遍：错题全部 + 抽查 5 · 今天已答 <b>'+stat.n+'</b> 张（错 <b>'+stat.wrong+'</b>）'):'今天还没答词条/名解，先去练，晚上再来过关');
+ h+='<div class="td-task td-gt'+(G&&G.done?' ok':'')+'"><span class="td-check">'+(G&&G.done?'✓':'')+'</span>'
+  +'<div class="td-tb"><b>🌙 晚间过关测验</b><small>'+gtSub+'</small>'
+  +(G&&!G.done&&G.list.length?'<div class="td-bar"><i style="width:'+Math.round(G.pos/G.list.length*100)+'%"></i></div>':'')
+  +'</div>'
+  +(G&&!G.done?'<span class="td-prog">'+G.pos+'/'+G.list.length+'</span>':'')
+  +(stat.n?'<button class="td-go" id="aiTdGt">'+(G?(G.done?'再来一轮':'继续过关'):'开始过关')+'</button>':'')
+  +'</div>';
  h+='</div>';
  h+='<div class="ai-td-aux"><span>抽背任务：</span>'
   +(function(){var QA=D.qzMap&&D.qzMap.all;var t='📥 复习清零 '+(D.done.rev?'✓':'剩 '+over+' 张');if(QA&&QA.keys.length&&QA.pos<QA.keys.length)t='📥 抽背 '+QA.pos+'/'+QA.keys.length+' · 继续';return '<button type="button" class="ai-pick" id="aiTdRev">'+t+'</button>';})()
@@ -1529,6 +1592,7 @@ function bindAiTd($){
  b=$('aiTdDr');if(b)b.addEventListener('click',function(){tdEnsure();tdChainGo('drill');});
  b=$('aiTdTr');if(b)b.addEventListener('click',function(){tdEnsure();tdChainGo('trans');});
  b=$('aiTdWr');if(b)b.addEventListener('click',function(){tdEnsure();tdChainGo('write');});
+ b=$('aiTdGt');if(b)b.addEventListener('click',tdGtStart);
  b=$('aiTdRev');if(b)b.addEventListener('click',function(){openQuiz();});
  b=$('aiTdNeu');if(b)b.addEventListener('click',function(){openQuiz('词条');});
  b=$('tdBtnSum');if(b)b.addEventListener('click',tdSummary);
@@ -1760,6 +1824,11 @@ setNav();
 #aiSelSpk:hover{background:var(--green);color:#f3efe6;border-color:var(--green)}
 #aiSelSpk:active{transform:scale(.92)}
 #aiSelSpk svg{width:16px;height:16px}
+.ai-td-brief{font-size:13px;color:var(--ink);background:rgba(46,74,56,.05);border:1px solid var(--line);border-radius:10px;padding:9px 14px;margin-bottom:12px;line-height:1.7}
+.ai-td-brief b{color:var(--green2)}
+.td-bar{height:5px;background:rgba(46,74,56,.10);border-radius:99px;margin-top:7px;overflow:hidden;max-width:340px}
+.td-bar i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .3s}
+.td-gt{border-top:2px dashed var(--line);margin-top:4px;padding-top:12px}
 </style>
 </body>
 </html>
