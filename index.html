@@ -1711,8 +1711,16 @@ setNav();
 .ai-fastopt{display:flex;align-items:center;gap:7px;margin:10px 2px 0;font-size:12.5px;color:var(--ink);cursor:pointer;line-height:1.6}
 .ai-fastopt input{accent-color:var(--green);width:15px;height:15px;flex:none}
 .ai-wrap{max-width:780px}
-.ai-out{font-size:15.5px;line-height:1.85;padding:20px 22px}
-.ai-out h4{font-size:17px;margin:16px 0 6px}
+.ai-out{font-size:15.5px;line-height:1.72;padding:18px 22px}
+.ai-out h4{font-size:17px;margin:12px 0 4px}
+.ai-out li{margin:1px 0}
+@media(min-width:1180px){
+ .ai-wrap{max-width:1150px}
+ .ai-setup,.ai-modes,.ai-task,.ai-answer,.ai-feedback,.ai-mark,.ai-next-bar,.ai-foot{max-width:780px}
+ .ai-out{column-count:2;column-gap:40px;column-rule:1px dashed var(--line)}
+ .ai-out h4{break-after:avoid;margin-top:0;padding-top:10px}
+ .ai-out ul,.ai-out li{break-inside:avoid}
+}
 .mn-line{background:rgba(255,255,255,.15)}
 .ai-ans-mn{color:var(--green2)}
 .ai-panel-body{font-size:16px;line-height:2}
