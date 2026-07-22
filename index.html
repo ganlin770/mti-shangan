@@ -719,10 +719,35 @@ function aiMd(t){
  return s;
 }
 
+/* 抽背讲解按小标题整理为纵向分区；每次流式重绘都会重新整理，避免多栏横向溢出。 */
+function aiPanelArrange(el){
+ if(!el||el.id!=='aiQuizBody')return;
+ var nodes=Array.prototype.slice.call(el.childNodes),frag=document.createDocumentFragment();
+ var section=null,count=0;
+ function newSection(extra){
+  section=document.createElement('section');
+  section.className='ai-exp-section'+(count++===0?' is-primary':'')+(extra||'');
+  frag.appendChild(section);
+ }
+ nodes.forEach(function(node){
+  if(node.nodeType===1&&node.tagName==='H4'){
+   var title=node.textContent||'';
+   var kind=/采分点|考点与判分/.test(title)?' is-points':(/记忆钩子|拆解与记忆/.test(title)?' is-memory':(/延伸备考|扩展积累/.test(title)?' is-secondary':''));
+   newSection(kind);section.appendChild(node);return;
+  }
+  if(node.nodeType===1&&node.classList.contains('ai-exp-bar')){
+   section=null;frag.appendChild(node);return;
+  }
+  if(!section)newSection('');
+  section.appendChild(node);
+ });
+ el.innerHTML='';el.appendChild(frag);
+}
+
 /* ---- 流式请求（按 id 现查，免疫重渲染）---- */
 function aiPaint(target,html){
  var el=typeof target==='string'?document.getElementById(target):target;
- if(!el)return;el.classList.add('show');el.innerHTML=html;
+ if(!el)return;el.classList.add('show');el.innerHTML=html;aiPanelArrange(el);
 }
 function aiStream(userText,target,onDone,routeOverride){
  var route=routeOverride&&routeOverride.model?routeOverride:(typeof routeOverride==='string'?{model:routeOverride,key:routeOverride,label:aiLabelM(routeOverride)}:aiRoute('free',false));
@@ -926,8 +951,8 @@ function aiRetMgrShow(){
 }
 function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function aiExpShow(body,key,c){
- body.classList.add('show');
- body.innerHTML=aiMd(c.x)+'<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' 生成 · 本次未耗额度<button type="button" class="ai-pick" id="aiExpRegen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">重新生成</button></div>';
+ aiPaint(body,aiMd(c.x));
+ body.insertAdjacentHTML('beforeend','<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' 生成 · 本次未耗额度<button type="button" class="ai-pick" id="aiExpRegen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">重新生成</button></div>');
 }
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
@@ -1739,10 +1764,10 @@ render=function(){
 setNav();
 })();
 </script>
-<style id="split-layout-v1">
-/* ========== 抽背两栏满屏布局 · split-layout v1 ==========
+<style id="split-layout-v2">
+/* ========== 抽背两栏满屏布局 · split-layout v2 ==========
    桌面 >=900px：#ovl 打开 -> 两栏 Grid 铺满（左 AI 讲解常驻 / 右 背诵卡）
-   小屏  <900px：完全回退现状（底部悬浮按钮 + 底部弹出面板）
+   小屏  <900px：底部悬浮按钮 + 近满宽可滚动讲解面板
    仅用站内变量（--paper/--card/--line/--green/--green2/--mut），无新配色
    置于尾部：不改动 <head> 与巨型数据行，选择器 ID/.ovl.on 高特异性稳压 head 规则
    ======================================================= */
@@ -1764,6 +1789,9 @@ setNav();
   .ovl.on #quizbox>*{flex:none}
   .ovl.on .qcard{height:clamp(440px,66vh,760px)}
   .qclose{z-index:70}
+}
+@media (min-width:1200px){
+  .ovl.on{grid-template-columns:clamp(520px,42vw,720px) minmax(0,1fr)}
 }
 .ai-quiz-btn:disabled{opacity:.45;cursor:default;pointer-events:none}
 .qclose{top:16px;right:18px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:300;line-height:1;color:rgba(255,255,255,.92);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:50%;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .18s,transform .18s;user-select:none}
@@ -1809,6 +1837,31 @@ setNav();
  .ai-mode{font-size:14px}
  .ai-answer{font-size:15px}
  .ai-td-brief{font-size:13.5px}
+}
+/* 抽背讲解是独立纵向阅读流，不继承 AI 助教主页的多栏排版。 */
+#aiQuizPanel #aiQuizBody{display:block!important;columns:auto!important;column-width:auto!important;column-count:auto!important;column-gap:normal!important;column-rule:0!important;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding:22px clamp(22px,2.2vw,32px) 28px;line-height:1.9}
+#aiQuizBody .ai-exp-section{box-sizing:border-box;width:100%;max-width:640px;margin:0 auto 14px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.38);box-shadow:0 1px 0 rgba(54,47,34,.03);break-inside:auto}
+#aiQuizBody .ai-exp-section.is-primary{border-left:4px solid var(--green);background:linear-gradient(180deg,rgba(46,74,56,.075),rgba(255,255,255,.38))}
+#aiQuizBody .ai-exp-section h4{display:flex;align-items:center;gap:9px;margin:0 0 10px;padding:0;border:0;font-size:18px;line-height:1.45;break-after:auto}
+#aiQuizBody .ai-exp-section h4::before{content:"";width:4px;height:17px;flex:none;border-radius:99px;background:var(--green)}
+#aiQuizBody .ai-exp-section ul{margin:9px 0 3px;padding:11px 16px 11px 34px;border-radius:10px;background:rgba(46,74,56,.05)}
+#aiQuizBody .ai-exp-section li{margin:3px 0;break-inside:auto}
+#aiQuizBody .ai-exp-section.is-points ul{counter-reset:aiPoint;margin-top:12px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--paper);overflow:hidden}
+#aiQuizBody .ai-exp-section.is-points li{counter-increment:aiPoint;position:relative;list-style:none;margin:0;padding:11px 13px 11px 42px;border-bottom:1px solid var(--line)}
+#aiQuizBody .ai-exp-section.is-points li:last-child{border-bottom:0}
+#aiQuizBody .ai-exp-section.is-points li::before{content:counter(aiPoint);position:absolute;left:13px;top:12px;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:var(--green);color:#f3efe6;font-size:10px;font-weight:700;line-height:1}
+#aiQuizBody .ai-exp-section.is-memory{background:rgba(196,158,66,.065)}
+#aiQuizBody .ai-exp-section.is-secondary{background:rgba(255,255,255,.22)}
+#aiQuizPanel .ai-exp-bar{max-width:640px;margin:20px auto 0}
+#aiQuizPanel .ai-ask-row{padding:12px 16px;background:var(--paper)}
+#aiQuizPanel .ai-ask-inp,#aiQuizPanel .ai-ask-btn{min-height:44px}
+@media (max-width:899.98px){
+ #aiQuizBtn{width:min(680px,calc(100vw - 32px));justify-content:center}
+ #aiQuizPanel.show{max-height:min(72vh,620px)}
+ #aiQuizPanel .ai-panel-body{flex:1 1 auto;min-height:0;max-height:none}
+ #aiQuizPanel #aiQuizBody{padding:16px;font-size:15.5px;line-height:1.85;scrollbar-gutter:auto}
+ #aiQuizBody .ai-exp-section{max-width:none;margin-bottom:12px;padding:15px 16px}
+ #aiQuizBody .ai-exp-section h4{font-size:17px}
 }
 .mn-line{background:rgba(255,255,255,.15)}
 .ai-ans-mn{color:var(--green2)}
