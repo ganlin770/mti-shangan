@@ -519,6 +519,8 @@ var AI_MODELS=[
  ['kimi-k3','Kimi K3 · Max 全程']
 ];
 var AI_MODEL='kimi-k3';
+var AI_MAX_TOKENS=8000;
+var AI_RETRY_MAX_TOKENS=12000;
 function aiRoute(mode,deep){
  return {model:AI_MODEL,key:AI_MODEL+':max',label:'Kimi K3 · Max 深度',reasoning_effort:'max'};
 }
@@ -747,9 +749,10 @@ function aiPaint(target,html){
  var el=typeof target==='string'?document.getElementById(target):target;
  if(!el)return;el.classList.add('show');el.innerHTML=html;aiPanelArrange(el);
 }
-function aiStream(userText,target,onDone,routeOverride){
+function aiStream(userText,target,onDone,routeOverride,retryCount){
  var route=aiRoute('free',true);
  var mdl=AI_MODEL;
+ var retryNo=Number(retryCount)||0;
  aiAbort=new AbortController();aiBusy=true;
  var t0=Date.now();var aiwPhase=0;var aiwT=null;
  function aiwPaint(){
@@ -760,7 +763,8 @@ function aiStream(userText,target,onDone,routeOverride){
  }
  function aiwStop(){if(aiwT){clearInterval(aiwT);aiwT=null;}}
  aiwPaint();aiwT=setInterval(aiwPaint,1000);
- var req={model:mdl,stream:true,max_tokens:3400,messages:[{role:'system',content:aiSys()},{role:'user',content:userText}]};
+ var retryHint=retryNo?'\n\n【最终输出要求】上一次响应的深度思考占满了输出额度。请完成必要分析后务必输出完整最终答案，并保留足够额度给正文；不得只返回思考过程。':'';
+ var req={model:mdl,stream:true,max_tokens:retryNo?AI_RETRY_MAX_TOKENS:AI_MAX_TOKENS,messages:[{role:'system',content:aiSys()},{role:'user',content:userText+retryHint}]};
  if(route.thinking)req.thinking=route.thinking;
  if(route.reasoning_effort)req.reasoning_effort=route.reasoning_effort;
  fetch(aiBase()+'/v1/chat/completions',{
@@ -781,7 +785,16 @@ function aiStream(userText,target,onDone,routeOverride){
      if(c){if(!full)aiwStop();aiwPhase=2;full+=c;aiPaint(target,aiMd(full)+'<span class="cursor"></span>');}}catch(e){}});
    return pump();});}
   return pump();
-  function fin(text){aiwStop();aiPaint(target,aiMd(text||'（无内容返回）'));aiBusy=false;onDone&&onDone(text,Date.now()-t0);}
+  function fin(text){
+   aiwStop();
+   if(!text&&retryNo<1){
+    aiBusy=false;
+    aiPaint(target,'<div class="ai-wait on"><span class="ai-wait-dots"><i></i><i></i><i></i></span><span><b>K3 Max 思考已完成</b> · 正文额度不足，正在自动续答…</span></div>');
+    setTimeout(function(){aiStream(userText,target,onDone,routeOverride,retryNo+1);},250);
+    return;
+   }
+   aiPaint(target,aiMd(text||'（K3 Max 已完成思考，但仍未生成正文，请点击重新生成）'));aiBusy=false;onDone&&onDone(text,Date.now()-t0);
+  }
  }).catch(function(e){
   aiwStop();aiBusy=false;
   if(e.name==='AbortError'){aiPaint(target,'<i style="color:var(--mut)">（已停止）</i>');onDone&&onDone(null,0);return;}
