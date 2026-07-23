@@ -534,7 +534,8 @@ Object.keys(AI_SCOPE_DEFAULTS).forEach(function(scope){
 if(aiNeedsSmartMigration){try{localStorage.setItem(AIK,JSON.stringify(aiCfg));}catch(e){}}
 
 var AI_MODELS=[
- ['kimi-k3','Kimi K3 · Low / High / Max']
+ ['kimi-k3','Kimi K3 · 主模型'],
+ ['deepseek-v4-pro','DeepSeek V4 Pro · 自动备用']
 ];
 var AI_MODEL='kimi-k3';
 function aiValidEffort(e){return AI_EFFORT_META[e]?e:null;}
@@ -564,6 +565,17 @@ function aiSetEffort(scope,effort){scope=aiScope(scope);effort=aiValidEffort(eff
 function aiRoute(mode){
  var scope=aiScope(mode);var effort=aiEffort(scope);var meta=AI_EFFORT_META[effort];
  return {model:AI_MODEL,scope:scope,effort:effort,key:AI_MODEL+':'+scope+':'+effort,label:'Kimi K3 · '+meta.label+' '+meta.name,reasoning_effort:effort};
+}
+function aiApplyGatewayRoute(route,response){
+ var fallback=response&&response.headers&&response.headers.get('x-ganlin-fallback-model');
+ if(!fallback)return false;
+ var from=response.headers.get('x-ganlin-fallback-from')||route.model||AI_MODEL;
+ var meta=AI_EFFORT_META[route.effort]||AI_EFFORT_META.high;
+ route.fallbackFrom=from;route.model=fallback;
+ route.key=fallback+':'+route.scope+':'+route.effort;
+ route.label=(fallback==='deepseek-v4-pro'?'DeepSeek V4 Pro':fallback)+' · 自动备用 · '+meta.label+' '+meta.name;
+ document.querySelectorAll('[data-ai-route-for="'+route.scope+'"]').forEach(function(el){el.textContent=route.label;});
+ return true;
 }
 var EXAM_DATE=new Date(2026,11,19);
 function aiDays(){return Math.max(0,Math.ceil((EXAM_DATE-new Date())/86400000));}
@@ -976,6 +988,7 @@ function aiStream(userText,target,onDone,routeOverride,retryCount){
   body:JSON.stringify(req)
  }).then(function(r){
   if(!r.ok){aiwStop();return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});}
+  aiApplyGatewayRoute(route,r);
   aiwPhase=route.reasoning_effort?1:2;aiwPaint();
   var rd=r.body.getReader(),dec=new TextDecoder(),buf='',full='';
   function pump(){return rd.read().then(function(res){
@@ -1179,6 +1192,7 @@ function aiCardJobAttempt(j,retryNo){
  }).then(function(r){
   if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});
   if(j.cancelled||aiCardJobs[j.key]!==j)return;
+  aiApplyGatewayRoute(j.route,r);
   j.phase=j.route.reasoning_effort?1:2;aiCardJobPaint(j);
   var rd=r.body.getReader(),dec=new TextDecoder(),buf='';
   function finish(){
@@ -1349,7 +1363,7 @@ function aiRetMgrShow(){
 }
 function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function aiExpShow(body,key,c,notice){
- var model=c.m==='kimi-k3'?'K3':(c.m||'旧版模型'),effort=c.e&&AI_EFFORT_META[c.e]?(model+' '+AI_EFFORT_META[c.e].label):'旧版档位未知';
+ var model=c.m==='kimi-k3'?'K3':(c.m==='deepseek-v4-pro'?'DeepSeek V4 Pro（自动备用）':(c.m||'旧版模型')),effort=c.e&&AI_EFFORT_META[c.e]?(model+' '+AI_EFFORT_META[c.e].label):'旧版档位未知';
  var bar='<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' · '+esc(effort)+' · 本次未耗额度<button type="button" class="ai-pick ai-exp-regen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">按当前档位重新生成并覆盖</button></div>';
  aiPaint(body,(notice||'')+aiMd(c.x)+bar);
 }
@@ -1371,15 +1385,15 @@ function aiWTypeLabel(){for(var i=0;i<AI_WTYPES.length;i++)if(AI_WTYPES[i][0]===
 function aiSetupHtml(){
  var h='';
  if(aiOk()&&!aiSetupOpen){
-  h+='<div class="ai-setup ai-setup--slim"><span class="ai-slim-dot"></span><span>Kimi K3 已连接</span><b>'+esc(aiModelLabel())+'</b><button class="ai-pick" id="aiCfgEdit">设置</button></div>';
+  h+='<div class="ai-setup ai-setup--slim"><span class="ai-slim-dot"></span><span>Kimi K3 主模型已连接</span><b>DeepSeek V4 Pro 自动备用 · '+esc(aiModelLabel())+'</b><button class="ai-pick" id="aiCfgEdit">设置</button></div>';
  }else{
- h+='<div class="ai-setup"><div class="pl">连接设置 · Kimi K3</div><div class="ai-setup-grid">'
+ h+='<div class="ai-setup"><div class="pl">连接设置 · Kimi K3 主模型 + DeepSeek 自动备用</div><div class="ai-setup-grid">'
   +'<input id="aiUrl" placeholder="网关地址 https://…" value="'+esc(aiCfg.url)+'">'
   +'<input id="aiKey" type="password" placeholder="Kimi / 网关 API Key（只存本机浏览器）" value="'+esc(aiCfg.key||'')+'">'
   +'<div class="ai-route-static"><b>K3 三档思考</b><span>每个场景单独记忆</span></div>'
   +'<button class="ai-test" id="aiTest">测试连接</button></div>'
   +'<div class="ai-status" id="aiStatus"></div>'
-  +'<div class="ai-hint">全部使用 <b>Kimi K3</b>。Low 更快、High 均衡、Max 更深入；翻译、词条、名解、写作、讲解、追问和总结都可独立选择并自动记忆。连接仍走 Ganlin Gateway，凭证仅保存在本机浏览器。'+(aiOk()?' <button class="ai-pick" id="aiCfgClose" style="margin-left:6px">收起 ▲</button>':'')+'</div></div>';
+  +'<div class="ai-hint">正常情况使用 <b>Kimi K3</b>；若 Kimi 鉴权、额度、限流或上游服务异常，网关会自动切到 <b>DeepSeek V4 Pro</b> 并在结果中明确标注。Low 更快、High 均衡、Max 更深入；各任务可独立选择并自动记忆。浏览器仍只保存 Ganlin Gateway 地址与 Key，DeepSeek Key 仅在服务端。'+(aiOk()?' <button class="ai-pick" id="aiCfgClose" style="margin-left:6px">收起 ▲</button>':'')+'</div></div>';
  }
  return h;
 }
@@ -1507,7 +1521,7 @@ function bindAISetup(){
   var s=$('aiStatus');s.className='ai-status';s.textContent='测试中…';
   fetch(aiBase()+'/v1/models',{headers:{authorization:'Bearer '+aiCfg.key}}).then(function(r){
    if(!r.ok)throw new Error('HTTP '+r.status);return r.json();
-  }).then(function(d){var list=d.data||d.models||[];var ids=list.map(function(x){return typeof x==='string'?x:x.id;});var need=[AI_MODEL].filter(function(m){return ids.indexOf(m)<0;});if(need.length)throw new Error('缺少模型 '+need.join('、'));s.className='ai-status ok';s.textContent='✓ Kimi K3 已连通；Low / High / Max 可在各任务单独选择。';setTimeout(function(){if(cur==='ai'&&aiOk()){aiSetupOpen=false;aiSetupRerender();}},900);})
+  }).then(function(d){var list=d.data||d.models||[];var ids=list.map(function(x){return typeof x==='string'?x:x.id;});var need=[AI_MODEL].filter(function(m){return ids.indexOf(m)<0;});if(need.length)throw new Error('缺少模型 '+need.join('、'));s.className='ai-status ok';s.textContent='✓ 网关已连通；Kimi K3 主用，DeepSeek V4 Pro 故障时自动备用。';setTimeout(function(){if(cur==='ai'&&aiOk()){aiSetupOpen=false;aiSetupRerender();}},900);})
   .catch(function(e){s.className='ai-status err';s.textContent='✗ 连接失败：'+e.message+'（检查地址 / Key）';});
  });
  var ce=$('aiCfgEdit');if(ce)ce.addEventListener('click',function(){aiSetupOpen=true;aiSetupRerender();});
@@ -1584,7 +1598,7 @@ function bindAI(){
    return;
   }
   var effort=rec.e&&AI_EFFORT_META[rec.e]?AI_EFFORT_META[rec.e].label:(rec.e||'旧档位');
-  var model=rec.m==='kimi-k3'?'Kimi K3':(rec.m||'旧版模型');
+  var model=rec.m==='kimi-k3'?'Kimi K3':(rec.m==='deepseek-v4-pro'?'DeepSeek V4 Pro（自动备用）':(rec.m||'旧版模型'));
   f.innerHTML='<span>📌 '+esc(note||'解析已保存到本机 · 正在同步云端')+' · '+aiJudgeDate(rec.t)+' · '+esc(model+' '+effort)+'</span>'
    +'<button type="button" class="ai-pick" id="aiJudgeReask">按当前档位重新判分并覆盖</button>';
   var rb=document.getElementById('aiJudgeReask');if(rb)rb.addEventListener('click',function(){aiDoSend(true);});
