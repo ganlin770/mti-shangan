@@ -225,6 +225,9 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-panel-head .sp{flex:1}
 .ai-panel-x{flex:none;width:26px;height:26px;line-height:1;border:1px solid transparent;background:transparent;color:var(--mut);border-radius:8px;font-family:inherit;font-size:19px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
 .ai-panel-x:hover{background:rgba(191,81,48,.10);border-color:rgba(191,81,48,.22);color:var(--rust)}
+.ai-card-stop{display:none;flex:none;border:1px solid rgba(191,81,48,.24);background:rgba(191,81,48,.06);color:var(--rust);border-radius:8px;padding:5px 9px;font-family:inherit;font-size:11.5px;cursor:pointer}
+.ai-card-stop.show{display:inline-flex}
+.ai-card-stop:hover{background:rgba(191,81,48,.12)}
 .ai-panel-body{background:none;border:0;border-radius:0;padding:12px 16px 14px;font-size:13.5px;line-height:1.9;max-height:280px;overflow-y:auto;text-align:left}
 @media (max-height:680px){.ai-panel-body{max-height:190px}}
 
@@ -731,6 +734,19 @@ var aiRetryT=null;var aiRetryStop=null;
 var aiSetupOpen=false;var aiSrcOpen=false;var aiCiSrc='ci';
 var aiWType='speech';var aiWTheme=-1;var aiWReq='';
 var AIPOOL={};POOL.forEach(function(x){AIPOOL[x.key]=x;});
+var AI_CARD_KEY_COUNTS={},AI_CARD_BY_ID={},AI_CARDS_BY_KEY={};
+POOL.forEach(function(x){AI_CARD_KEY_COUNTS[x.key]=(AI_CARD_KEY_COUNTS[x.key]||0)+1;(AI_CARDS_BY_KEY[x.key]||(AI_CARDS_BY_KEY[x.key]=[])).push(x);});
+function aiCardHash(s){var h=5381,s2=String(s||'');for(var i=0;i<s2.length;i++)h=((h<<5)+h+s2.charCodeAt(i))|0;return (h>>>0).toString(36);}
+function aiCardId(x){if(!x)return '';return AI_CARD_KEY_COUNTS[x.key]>1?x.key+'@'+aiCardHash(x.a):x.key;}
+POOL.forEach(function(x){AI_CARD_BY_ID[aiCardId(x)]=x;});
+function aiCardFromId(k){return AI_CARD_BY_ID[k]||AIPOOL[k]||null;}
+function aiCardFromRow(row){
+ if(!row)return null;var k=row.getAttribute('data-k'),matches=AI_CARDS_BY_KEY[k]||[];
+ if(matches.length<2)return matches[0]||AIPOOL[k]||null;
+ var ra=row.querySelector('.ra'),txt=ra?ra.textContent:'';
+ for(var i=0;i<matches.length;i++)if(txt.indexOf(matches[i].a)===0)return matches[i];
+ return matches[0];
+}
 
 function aiRefresh(){if(aiBusy)aiCancelRequest();document.getElementById('view').innerHTML=aiView();bindAI();}
 function aiLabelM(m){for(var i=0;i<AI_MODELS.length;i++)if(AI_MODELS[i][0]===m)return AI_MODELS[i][1];return m;}
@@ -769,7 +785,7 @@ function aiPanelArrange(el){
    var kind=/采分点|考点与判分/.test(title)?' is-points':(/记忆钩子|拆解与记忆/.test(title)?' is-memory':(/延伸备考|扩展积累/.test(title)?' is-secondary':''));
    newSection(kind);section.appendChild(node);return;
   }
-  if(node.nodeType===1&&node.classList.contains('ai-exp-bar')){
+  if(node.nodeType===1&&(node.classList.contains('ai-exp-bar')||node.classList.contains('ai-card-jobbar'))){
    section=null;frag.appendChild(node);return;
   }
   if(!section)newSection('');
@@ -899,12 +915,13 @@ function aiExpAll(){try{return JSON.parse(localStorage.getItem(AIEK)||'{}')}catc
 function aiExpGet(k){var c=aiExpAll();return c[k]||null;}
 function aiExpPut(k,text,route){
  try{
-  var c=aiExpAll();c[k]={x:text,t:Date.now(),m:AI_MODEL,e:route&&route.effort?route.effort:null};
+  var c=aiExpAll();c[k]={x:text,t:Date.now(),m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null};
   var ks=Object.keys(c);
   if(ks.length>300){ks.sort(function(a,b){return c[a].t-c[b].t;});ks.slice(0,ks.length-300).forEach(function(d){delete c[d];});}
   localStorage.setItem(AIEK,JSON.stringify(c));
   aiExpCloudPush();
- }catch(e){try{localStorage.removeItem(AIEK)}catch(e2){}}
+  return true;
+ }catch(e){console.warn('exp save:',e);return false;}
 }
 /* 讲解云同步：独立行(SB_ID+'_exp')，生成后防抖4s整卷推送；启动拉取按时间戳新者合并。
    网络不可达时静默降级为仅本机（与原站进度云同步同行为）。*/
@@ -935,6 +952,176 @@ function aiExpCloudPull(){
  }catch(e){}
 }
 aiExpCloudPull();
+
+/* ---- 卡片讲解后台任务：按 cardKey 隔离，可并行、可收起、可单独停止 ---- */
+var aiCardJobs=Object.create(null);var aiCardJobSeq=0;var AI_CARD_JOB_HISTORY=24;
+function aiCardJobActive(j){return !!(j&&j.state==='running');}
+function aiCardJobsPrune(){
+ var old=Object.keys(aiCardJobs).map(function(k){return aiCardJobs[k];}).filter(function(j){return j&&!aiCardJobActive(j);});
+ if(old.length<=AI_CARD_JOB_HISTORY)return;
+ old.sort(function(a,b){return (a.finishedAt||a.startedAt)-(b.finishedAt||b.startedAt);});
+ old.slice(0,old.length-AI_CARD_JOB_HISTORY).forEach(function(j){if(aiCardJobs[j.key]===j)delete aiCardJobs[j.key];});
+}
+function aiCardPanels(k){
+ var out=[];document.querySelectorAll('.ai-quiz-panel[data-ai-card-key]').forEach(function(p){
+  if(p.getAttribute('data-ai-card-key')===String(k))out.push(p);
+ });return out;
+}
+function aiCardJobLabel(k,main){
+ var j=aiCardJobs[k];
+ if(aiCardJobActive(j))return '后台生成中 · 查看';
+ if(aiExpGet(k))return '查看讲解（已保存）';
+ if(j&&(j.state==='error'||j.state==='stopped'))return '重新生成讲解';
+ return main?'AI 讲解这张卡':'AI 讲解';
+}
+function aiCardSyncButtons(k){
+ document.querySelectorAll('[data-ai-explain-key]').forEach(function(b){
+  if(b.getAttribute('data-ai-explain-key')!==String(k))return;
+  var sp=b.querySelector('span');if(sp)sp.textContent=aiCardJobLabel(k,b.id==='aiQuizBtn');
+  b.classList.toggle('is-running',aiCardJobActive(aiCardJobs[k]));
+ });
+}
+function aiCardJobBar(j,kind,text){
+ var cls='ai-card-jobbar'+(kind?' '+kind:'');
+ return '<div class="'+cls+'">'+text+'<span>'+(aiCardJobActive(j)?'可切换卡片，任务会在后台继续':'旧讲解不会被本次结果影响')+'</span></div>';
+}
+function aiCardAskState(panel,running){
+ var inp=panel.querySelector('.ai-ask-inp'),btn=panel.querySelector('.ai-ask-btn');
+ if(inp){inp.disabled=running;inp.placeholder=running?'讲解生成完成后即可追问…':'对这张卡有自己的疑问？直接问 AI…';}
+ if(btn)btn.disabled=running;
+}
+function aiCardJobPaint(j){
+ if(!j)return;
+ var panels=aiCardPanels(j.key),elapsed=Math.max(0,Math.floor((Date.now()-j.startedAt)/1000));
+ panels.forEach(function(panel){
+  var body=panel.querySelector('.ai-panel-body');if(!body)return;
+  var stop=panel.querySelector('.ai-card-stop');if(stop)stop.classList.toggle('show',aiCardJobActive(j));
+  aiCardAskState(panel,aiCardJobActive(j));
+  if(j.state==='done'){
+   var done=aiExpGet(j.key);if(done)aiExpShow(body,j.key,done);else aiPaint(body,aiMd(j.text||'（无内容返回）'));
+   return;
+  }
+  if(j.state==='error'||j.state==='stopped'){
+   var saved=aiExpGet(j.key);
+   var msg=j.state==='stopped'?'本次生成已停止，之前保存的讲解没有被覆盖':(j.saveFailed?'新讲解已生成，但保存失败；之前保存的讲解没有被覆盖':'本次重新生成失败：'+esc(j.error||'未知错误')+'；之前保存的讲解没有被覆盖');
+   var notice=aiCardJobBar(j,j.state==='stopped'?'is-stopped':'is-error',msg);
+   if(saved)aiExpShow(body,j.key,saved,notice);else aiPaint(body,notice+(j.text?aiMd(j.text):''));
+   return;
+  }
+  if(j.text){
+   aiPaint(body,aiCardJobBar(j,'','<b>'+esc(j.route.label)+'</b> · 后台生成中 · '+elapsed+' 秒')+aiMd(j.text)+'<span class="cursor"></span>');
+   return;
+  }
+  var phase=j.phase===3?'正文额度不足，正在自动续答':(j.phase===2?'正在生成':(j.phase===1?'正在思考':'请求已发出'));
+  aiPaint(body,'<div class="ai-wait'+(j.phase?' on':'')+'"><span class="ai-wait-dots"><i></i><i></i><i></i></span><span><b>后台任务</b> · '+esc(j.route.label)+' '+phase+' · 已等待 '+elapsed+' 秒</span><span class="ai-wait-tip">可以收起面板或切换卡片；本任务会继续，不影响其他卡片生成。</span></div>');
+ });
+ aiCardSyncButtons(j.key);
+}
+function aiCardJobStop(k){
+ var j=aiCardJobs[k];if(!aiCardJobActive(j))return;
+ j.cancelled=true;j.state='stopped';j.finishedAt=Date.now();
+ if(j.tick){clearInterval(j.tick);j.tick=null;}
+ if(j.retryTimer){clearTimeout(j.retryTimer);j.retryTimer=null;}
+ if(j.controller){try{j.controller.abort();}catch(e){}j.controller=null;}
+ aiCardJobPaint(j);aiCardJobsPrune();
+}
+function aiCardJobAttempt(j,retryNo){
+ if(!j||j.cancelled||aiCardJobs[j.key]!==j)return;
+ j.retryNo=retryNo;j.phase=0;j.state='running';j.error='';j.controller=new AbortController();
+ if(j.tick)clearInterval(j.tick);
+ j.tick=setInterval(function(){if(aiCardJobs[j.key]===j&&aiCardJobActive(j))aiCardJobPaint(j);},1000);
+ aiCardJobPaint(j);
+ var effortMeta=AI_EFFORT_META[j.route.effort]||AI_EFFORT_META.high;
+ var retryHint=retryNo?'\n\n【最终输出要求】上一次响应的深度思考占满了输出额度。请完成必要分析后务必输出完整最终答案，并保留足够额度给正文；不得只返回思考过程。':'';
+ var req={model:j.route.model||AI_MODEL,stream:true,max_tokens:retryNo?effortMeta.retry:effortMeta.tokens,messages:[{role:'system',content:aiSys()},{role:'user',content:j.prompt+retryHint}]};
+ if(j.route.thinking)req.thinking=j.route.thinking;
+ if(j.route.reasoning_effort)req.reasoning_effort=j.route.reasoning_effort;
+ fetch(aiBase()+'/v1/chat/completions',{
+  method:'POST',signal:j.controller.signal,
+  headers:{'content-type':'application/json','authorization':'Bearer '+aiCfg.key},
+  body:JSON.stringify(req)
+ }).then(function(r){
+  if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+'：'+t.slice(0,140));});
+  if(j.cancelled||aiCardJobs[j.key]!==j)return;
+  j.phase=j.route.reasoning_effort?1:2;aiCardJobPaint(j);
+  var rd=r.body.getReader(),dec=new TextDecoder(),buf='';
+  function finish(){
+   if(j.cancelled||aiCardJobs[j.key]!==j)return;
+   if(j.tick){clearInterval(j.tick);j.tick=null;}
+   j.controller=null;
+   if(!j.text&&retryNo<1){
+    j.phase=3;j.retryTimer=setTimeout(function(){j.retryTimer=null;aiCardJobAttempt(j,retryNo+1);},250);
+    aiCardJobPaint(j);return;
+   }
+   if(!j.text){
+    j.state='error';j.finishedAt=Date.now();j.error=j.route.label+' 已完成思考，但仍未生成正文';aiCardJobPaint(j);aiCardJobsPrune();return;
+   }
+   if(!aiExpPut(j.key,j.text,j.route)){j.state='error';j.finishedAt=Date.now();j.saveFailed=true;j.error='新讲解已生成，但本机保存失败';aiCardJobPaint(j);aiCardJobsPrune();return;}
+   j.state='done';j.phase=2;j.finishedAt=Date.now();aiCardJobPaint(j);aiCardJobsPrune();
+  }
+  function pump(){return rd.read().then(function(res){
+   if(j.cancelled||aiCardJobs[j.key]!==j){try{rd.cancel();}catch(e){}return;}
+   if(res.done){finish();return;}
+   buf+=dec.decode(res.value,{stream:true});
+   var lines=buf.split('\n');buf=lines.pop();
+   lines.forEach(function(l){l=l.trim();if(l.indexOf('data:')!==0)return;var d=l.slice(5).trim();if(!d||d==='[DONE]')return;
+    try{var data=JSON.parse(d),delta=data.choices&&data.choices[0]&&data.choices[0].delta;var c=delta&&delta.content;var reasoning=delta&&delta.reasoning_content;
+     if(reasoning)j.phase=1;
+     if(c){j.phase=2;j.text+=c;aiCardJobPaint(j);}}catch(e){}});
+   return pump();
+  });}
+  return pump();
+ }).catch(function(e){
+  if(j.tick){clearInterval(j.tick);j.tick=null;}
+  j.controller=null;
+  if(aiCardJobs[j.key]!==j)return;
+  if(j.cancelled||e.name==='AbortError'){j.state='stopped';j.finishedAt=j.finishedAt||Date.now();aiCardJobPaint(j);aiCardJobsPrune();return;}
+  j.state='error';j.finishedAt=Date.now();j.error=e.message;aiCardJobPaint(j);aiCardJobsPrune();
+ });
+}
+function aiCardJobStart(x,route){
+ if(!x)return null;var k=aiCardId(x),current=aiCardJobs[k];
+ if(aiCardJobActive(current)){aiCardJobPaint(current);return current;}
+ var j={id:++aiCardJobSeq,key:k,card:x,prompt:aiCardPrompt(x),route:route||aiRoute('explain',false),state:'running',phase:0,text:'',error:'',startedAt:Date.now(),finishedAt:0,controller:null,tick:null,retryTimer:null,cancelled:false,scrollTop:0};
+ aiCardJobs[k]=j;aiCardJobAttempt(j,0);return j;
+}
+function aiCardPanelAttach(panel,x){
+ if(!panel||!x)return;
+ var k=aiCardId(x);panel.setAttribute('data-ai-card-key',k);
+ var sub=panel.querySelector('.ai-panel-sub');if(sub)sub.textContent='· '+x.q;
+ var j=aiCardJobs[k],body=panel.querySelector('.ai-panel-body');
+ if(j){aiCardJobPaint(j);if(body&&typeof j.scrollTop==='number')body.scrollTop=j.scrollTop;return;}
+ var saved=aiExpGet(k);
+ if(saved)aiExpShow(body,k,saved);
+ else if(body){body.innerHTML='';body.classList.remove('show');var stop=panel.querySelector('.ai-card-stop');if(stop)stop.classList.remove('show');}
+ aiCardAskState(panel,false);
+ aiCardSyncButtons(k);
+}
+function aiCardPanelDetach(panel){
+ if(!panel)return;
+ var key=panel.getAttribute('data-ai-card-key'),body=panel.querySelector('.ai-panel-body'),job=key&&aiCardJobs[key];
+ if(job&&body)job.scrollTop=body.scrollTop;
+ panel.removeAttribute('data-ai-card-key');
+ if(body){body.innerHTML='';body.classList.remove('show');}
+ var stop=panel.querySelector('.ai-card-stop');if(stop)stop.classList.remove('show');
+ var sub=panel.querySelector('.ai-panel-sub');if(sub)sub.textContent='';
+ aiCardAskState(panel,false);
+}
+function aiCardOpen(panel,x){
+ if(!panel||!x)return;
+ panel.classList.add('show');aiCardPanelAttach(panel,x);
+ var k=aiCardId(x),j=aiCardJobs[k];
+ if(aiCardJobActive(j)||aiExpGet(k))return;
+ if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+ aiCardJobStart(x,aiRoute('explain',false));
+}
+document.addEventListener('click',function(ev){
+ var tg=ev.target;if(!tg||!tg.closest)return;
+ var stop=tg.closest('.ai-card-stop');if(!stop)return;
+ ev.preventDefault();ev.stopPropagation();
+ var panel=stop.closest('.ai-quiz-panel');if(panel)aiCardJobStop(panel.getAttribute('data-ai-card-key'));
+});
+
 /* ---- 讲解面板自由追问：针对当前卡问自己的问题，回答追加在讲解下方（不覆盖已存讲解）---- */
 function aiAskPrompt(x,q){
  return '关于这张备考卡片的追问。卡片类型：'+x.type+'；题目：'+x.q+'；标准答案：'+x.a+(x.m?'；助记：'+x.m:'')
@@ -943,12 +1130,13 @@ function aiAskPrompt(x,q){
 }
 function aiAskGo(panel){
  if(aiBusy)return;
+ var boundKey=panel.getAttribute('data-ai-card-key');if(aiCardJobActive(aiCardJobs[boundKey]))return;
  var inp=panel.querySelector('.ai-ask-inp');if(!inp)return;
  var q=inp.value.trim();if(!q)return;
  if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
- var x=null;
- if(panel.id==='aiQuizPanel'){x=queue[qi];}
- else{var row=panel.closest('.row');x=row?AIPOOL[row.getAttribute('data-k')]:null;}
+ var x=aiCardFromId(panel.getAttribute('data-ai-card-key'));
+ if(!x&&panel.id==='aiQuizPanel')x=queue[qi];
+ if(!x){var row=panel.closest('.row');x=aiCardFromRow(row);}
  if(!x)return;
  var body=panel.querySelector('.ai-panel-body');if(!body)return;
  panel.classList.add('show');
@@ -1024,22 +1212,20 @@ function aiRetMgrShow(){
  });
 }
 function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
-function aiExpShow(body,key,c){
- aiPaint(body,aiMd(c.x));
- var effort=c.e&&AI_EFFORT_META[c.e]?('K3 '+AI_EFFORT_META[c.e].label):'旧版档位未知';
- body.insertAdjacentHTML('beforeend','<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' · '+effort+' · 本次未耗额度<button type="button" class="ai-pick" id="aiExpRegen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">按当前档位重新生成</button></div>');
+function aiExpShow(body,key,c,notice){
+ var model=c.m==='kimi-k3'?'K3':(c.m||'旧版模型'),effort=c.e&&AI_EFFORT_META[c.e]?(model+' '+AI_EFFORT_META[c.e].label):'旧版档位未知';
+ var bar='<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' · '+esc(effort)+' · 本次未耗额度<button type="button" class="ai-pick ai-exp-regen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">按当前档位重新生成并覆盖</button></div>';
+ aiPaint(body,(notice||'')+aiMd(c.x)+bar);
 }
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
- var rb=tg.closest('#aiExpRegen');
+ var rb=tg.closest('.ai-exp-regen');
  if(!rb)return;
- if(aiBusy)return;
  if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
- var k=rb.getAttribute('data-k');var x=AIPOOL[k];if(!x)return;
+ var k=rb.getAttribute('data-k'),x=aiCardFromId(k);if(!x)return;
  var pp=rb.closest('.ai-quiz-panel');var pb=pp&&pp.querySelector('.ai-panel-body');if(!pb)return;
- pb.innerHTML='';
- var route=aiRoute('explain',false);
- aiStream(aiCardPrompt(x),pb,function(t){if(t)aiExpPut(k,t,route);},route);
+ pp.setAttribute('data-ai-card-key',k);pb.innerHTML='';
+ aiCardJobStart(x,aiRoute('explain',false));
 });
 
 /* ---- 视图 ---- */
@@ -1297,41 +1483,31 @@ function aiDecorateMist(){
  var mig=document.getElementById('mig');if(!mig)return;
  mig.querySelectorAll('.row').forEach(function(row){
   if(row.querySelector('.ai-row-btn'))return;
-  var ra=row.querySelector('.ra');if(!ra)return;
+  var ra=row.querySelector('.ra'),x=aiCardFromRow(row);if(!ra||!x)return;
+  var cardId=aiCardId(x);
   var b=document.createElement('button');
   b.className='ai-pick ai-row-btn';
-  b.innerHTML=AI_SPARK+'<span>'+(aiExpGet(row.getAttribute('data-k'))?'查看讲解（已保存）':'AI 讲解')+'</span>';
+  b.setAttribute('data-ai-explain-key',cardId);
+  b.innerHTML=AI_SPARK+'<span>'+aiCardJobLabel(cardId,false)+'</span>';
   var launch=document.createElement('div');launch.className='ai-row-ai-tools';
   launch.innerHTML=aiEffortHtml('explain','panel');launch.appendChild(b);ra.appendChild(launch);
   b.addEventListener('click',function(ev){
    ev.stopPropagation();
-   if(aiBusy)return;
-   var x=AIPOOL[row.getAttribute('data-k')];if(!x)return;
    var p=row.querySelector('.ai-quiz-panel');
    if(!p){
     p=document.createElement('div');p.className='ai-quiz-panel framed';
-    p.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-panel-x" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out"></div>'+aiAskComposerHtml();
+    p.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="sp"></span><button type="button" class="ai-card-stop">停止此任务</button><button type="button" class="ai-panel-x" aria-label="收起讲解">&times;</button></div><div class="ai-panel-body ai-out"></div>'+aiAskComposerHtml();
     p.addEventListener('click',function(ev){ev.stopPropagation();});
     p.querySelector('.ai-panel-x').addEventListener('click',function(ev){
      ev.stopPropagation();
      p.classList.remove('show');
      ra.classList.remove('ai-open');
-     if(aiBusy)aiCancelRequest();
-     var bb=p.querySelector('.ai-panel-body');if(bb){bb.innerHTML='';bb.classList.remove('show');}
+     aiCardPanelDetach(p);
     });
     ra.appendChild(p);
    }
-   var pb=p.querySelector('.ai-panel-body');
-   pb.innerHTML='';
-   p.classList.add('show');
    ra.classList.add('ai-open');
-   var c=aiExpGet(x.key);
-   if(c){aiExpShow(pb,x.key,c);return;}
-   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
-   var route=aiRoute('explain',false);
-   aiStream(aiCardPrompt(x),pb,function(t){
-    if(t){aiExpPut(x.key,t,route);var sp=b.querySelector('span');if(sp)sp.textContent='查看讲解（已保存）';}
-   },route);
+   aiCardOpen(p,x);
   });
  });
 }
@@ -1360,18 +1536,15 @@ render=function(){
 /* ---- 刷题卡「AI 讲解」---- */
 var AI_SPARK='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4a6.1 6.1 0 0 0-3.6 11.1c.4.3.6.7.6 1.1h6c0-.4.2-.8.6-1.1A6.1 6.1 0 0 0 12 3.4Z"/><path d="M9.6 18.3h4.8M10.7 20.9h2.6"/><path d="m12 7.5.78 1.92 1.92.78-1.92.78L12 12.9l-.78-1.92-1.92-.78 1.92-.78z"/></svg>';
 function aiQuizHide(){
- var _s=document.getElementById('aiQuizSub');if(_s)_s.textContent='';
  var p=document.getElementById('aiQuizPanel');
  if(!p)return;
  if(window.matchMedia&&window.matchMedia('(min-width:900px)').matches){
-  if(aiBusy)aiCancelRequest();
-  var bd=document.getElementById('aiQuizBody');if(bd){bd.innerHTML='';bd.classList.remove('show');}
+  aiCardPanelDetach(p);
   return;
  }
  if(!p.classList.contains('show'))return;
  p.classList.remove('show');
- if(aiBusy)aiCancelRequest();
- var b=document.getElementById('aiQuizBody');if(b){b.innerHTML='';b.classList.remove('show');}
+ aiCardPanelDetach(p);
 }
 var _aiOpenQuiz=openQuiz;
 openQuiz=function(ty){
@@ -1387,9 +1560,11 @@ openQuiz=function(ty){
   /* 定位交给 CSS：小屏=底部悬浮 / 桌面=左栏（split-layout v1）*/
   var panel=document.createElement('div');
   panel.id='aiQuizPanel';panel.className='ai-quiz-panel framed';
-  panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="ai-panel-sub" id="aiQuizSub"></span><span class="sp"></span><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="关闭讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div>'+aiAskComposerHtml();
+  panel.innerHTML='<div class="ai-panel-head">'+AI_SPARK+'<b>AI 讲解</b><span class="ai-panel-sub" id="aiQuizSub"></span><span class="sp"></span><button type="button" class="ai-card-stop">停止此任务</button><button type="button" class="ai-panel-x" id="aiQuizX" aria-label="收起讲解">&times;</button></div><div class="ai-panel-body ai-out" id="aiQuizBody"></div>'+aiAskComposerHtml();
   /* 定位交给 CSS：小屏=底部弹出 / 桌面=左栏常驻（split-layout v1）*/
   ovl.appendChild(panel);ovl.appendChild(launch);
+  var firstCard=queue[qi];
+  if(firstCard){var firstKey=aiCardId(firstCard);btn.setAttribute('data-ai-explain-key',firstKey);var firstSpan=btn.querySelector('span');if(firstSpan)firstSpan.textContent=aiCardJobLabel(firstKey,true);}
   var body=panel.querySelector('#aiQuizBody');
   panel.querySelector('#aiQuizX').addEventListener('click',function(ev){ev.stopPropagation();aiQuizHide();});
   ovl.addEventListener('click',function(ev){
@@ -1404,22 +1579,14 @@ openQuiz=function(ty){
    if(pp&&pp.classList.contains('show')){ev.stopPropagation();aiQuizHide();}
   });
   btn.addEventListener('click',function(){
-   if(aiBusy)return;
    var x=queue[qi];if(!x)return;
-   body.innerHTML='';
-   panel.classList.add('show');
-   var _sub=document.getElementById('aiQuizSub');if(_sub)_sub.textContent='· '+x.q;
-   var c=aiExpGet(x.key);
-   if(c){aiExpShow(body,x.key,c);return;}
-   if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
-   var route=aiRoute('explain',false);
-   aiStream(aiCardPrompt(x),body,function(t){if(t){aiExpPut(x.key,t,route);var sp=btn.querySelector('span');if(sp)sp.textContent='查看讲解（已保存）';}},route);
+   aiCardOpen(panel,x);
   });
  }
 };
 /* 切卡 / 关闭自测层时自动收起讲解面板 */
 var _aiRenderQuiz=renderQuiz;
-renderQuiz=function(){return _aiRenderQuiz.apply(this,arguments);};/* 切卡不清讲解：流式继续、内容保留（关层/✕才清）*/
+renderQuiz=function(){return _aiRenderQuiz.apply(this,arguments);};/* 切卡仅解除面板绑定；对应 cardKey 的后台任务继续 */
 var _aiCloseQuiz=closeQuiz;
 closeQuiz=function(){aiQuizHide();return _aiCloseQuiz.apply(this,arguments);};
 window.closeQuiz=closeQuiz;
@@ -1493,10 +1660,15 @@ function qMsDecorate(x){
 }
 renderQuiz=function(){
  var r=_qzRenderQuiz.apply(this,arguments);
- var _qb=document.getElementById('aiQuizBtn');
+ var _qb=document.getElementById('aiQuizBtn'),_qx=queue[qi],_qk=_qx?aiCardId(_qx):'';
+ var _qp=document.getElementById('aiQuizPanel');
+ if(_qp&&_qp.getAttribute('data-ai-card-key')&&_qp.getAttribute('data-ai-card-key')!==_qk){
+  aiCardPanelDetach(_qp);
+  if(window.matchMedia&&window.matchMedia('(max-width:899.98px)').matches)_qp.classList.remove('show');
+ }
  if(_qb){_qb.disabled=qi>=queue.length;
-  var _qx=queue[qi];var _qs=_qb.querySelector('span');
-  if(_qs)_qs.textContent=(_qx&&aiExpGet(_qx.key))?'查看讲解（已保存）':'AI 讲解这张卡';}
+  if(_qk)_qb.setAttribute('data-ai-explain-key',_qk);else _qb.removeAttribute('data-ai-explain-key');
+  var _qs=_qb.querySelector('span');if(_qs)_qs.textContent=_qx?aiCardJobLabel(_qk,true):'本轮讲解已完成';}
  if(qi<queue.length){var _mx=queue[qi];qMsDecorate(_mx);
   var _bt=document.querySelector('#quizbox .qbtns');
   if(_bt&&!document.querySelector('#quizbox .qret-row')){
@@ -1912,8 +2084,12 @@ setNav();
 .qclose{top:16px;right:18px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:300;line-height:1;color:rgba(255,255,255,.92);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:50%;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .18s,transform .18s;user-select:none}
 .qclose:hover{background:rgba(255,255,255,.24);transform:rotate(90deg)}
 .qclose:active{transform:rotate(90deg) scale(.92)}
-.ai-exp-bar{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--mut)}
+.ai-exp-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--mut)}
 .ai-exp-bar .ai-pick{margin-left:auto;flex:none}
+.ai-card-jobbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 auto 12px;padding:9px 12px;max-width:640px;border:1px solid var(--line);border-left:3px solid var(--green);border-radius:10px;background:rgba(46,74,56,.055);color:var(--green2);font-size:12.5px;line-height:1.55}
+.ai-card-jobbar span{margin-left:auto;color:var(--mut);font-size:11.5px}
+.ai-card-jobbar.is-error,.ai-card-jobbar.is-stopped{border-left-color:var(--rust);background:rgba(191,81,48,.055);color:var(--rust)}
+.ai-card-jobbar.is-stopped{border-left-color:var(--mut);color:var(--mut);background:rgba(99,92,75,.045)}
 .ai-row-btn svg{vertical-align:-3px;margin-right:4px}
 .ai-panel-body{font-size:16px;line-height:2}
 .ai-panel-body h4{font-size:18px}
@@ -1922,6 +2098,7 @@ setNav();
 .ai-ask-inp:focus{outline:none;border-color:var(--green)}
 .ai-ask-btn{flex:none;border:1px solid var(--green);background:var(--green);color:#f3efe6;border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit}
 .ai-ask-btn:hover{background:var(--green2)}
+.ai-ask-btn:disabled,.ai-ask-inp:disabled{opacity:.55;cursor:not-allowed}
 .ai-ask-block{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
 .ai-ask-q{font-weight:700;color:var(--green2);font-size:15px;margin-bottom:6px}
 .ai-ask-a{font-size:16px;line-height:2}
