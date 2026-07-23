@@ -755,13 +755,104 @@ function aiCardFromRow(row){
  return matches[0];
 }
 
-/* ---- 判分解析保存：按具体题目保存在本机浏览器，切题/刷新后恢复；与判分进度副作用彻底分离 ---- */
-var AIJK='mti_ai_judge_v1';var AIJ_MAX=180;var aiJudgeRestoreCurrent=null;
+/* ---- 判分解析保存：本机 LRU 秒开 + Supabase 逐题永久保存；与判分进度副作用彻底分离 ---- */
+var AIJK='mti_ai_judge_v1';var AIJMK='mti_ai_judge_cloud_v1';var AIJ_MAX=180;
+var aiJudgeRestoreCurrent=null;var aiJudgeFootCurrent=null;var aiJudgeIsCurrentNow=null;
+var AIJ_CLOUD_PREFIX=SB_ID+'_judge_';var aiJudgeCloudQueue=Object.create(null);
+var aiJudgeCloudT=null;var aiJudgeCloudRetry=0;var aiJudgeCloudFetches=Object.create(null);
 function aiJudgeAll(){try{var c=JSON.parse(localStorage.getItem(AIJK)||'{}');return c&&typeof c==='object'?c:{}}catch(e){return {}}}
+function aiJudgeCloudMeta(){try{var c=JSON.parse(localStorage.getItem(AIJMK)||'{}');return c&&typeof c==='object'?c:{}}catch(e){return {}}}
 function aiJudgeTrim(c){
  var ks=Object.keys(c);
  if(ks.length>AIJ_MAX){ks.sort(function(a,b){return (c[a].t||0)-(c[b].t||0);});ks.slice(0,ks.length-AIJ_MAX).forEach(function(k){delete c[k];});}
  return c;
+}
+function aiJudgeLocalPut(key,r){
+ try{var c=aiJudgeAll();c[key]=r;aiJudgeTrim(c);localStorage.setItem(AIJK,JSON.stringify(c));return true;}
+ catch(e){console.warn('judge save:',e);return false;}
+}
+function aiJudgeCloudMetaPut(items){
+ try{
+  var m=aiJudgeCloudMeta();
+  items.forEach(function(x){if(!m[x.k]||m[x.k]<(x.r.t||0))m[x.k]=x.r.t||Date.now();});
+  var ks=Object.keys(m);
+  if(ks.length>600){ks.sort(function(a,b){return (m[a]||0)-(m[b]||0);});ks.slice(0,ks.length-600).forEach(function(k){delete m[k];});}
+  localStorage.setItem(AIJMK,JSON.stringify(m));
+ }catch(e){}
+}
+function aiJudgeCloudId(key){return AIJ_CLOUD_PREFIX+encodeURIComponent(key).replace(/%/g,'~');}
+function aiJudgeCloudRecord(r){return !!(r&&r.x&&r.s&&Number(r.t)>0);}
+function aiJudgeCloudStatus(key,rec,note,warn){
+ var id=aiJudgeIdentity();if(!id||id.key!==key||id.sig!==rec.s||aiBusy)return;
+ var local=aiJudgeGet(id);if(local&&local.t>rec.t)return;
+ if(aiJudgeFootCurrent)aiJudgeFootCurrent(local&&local.t===rec.t?local:rec,note,warn);
+}
+function aiJudgeCloudRequeue(batch,message){
+ batch.forEach(function(x){
+  var old=aiJudgeCloudQueue[x.k];
+  if(!old||!old.r||old.r.t<=x.r.t)aiJudgeCloudQueue[x.k]={r:x.r,n:x.n||(old&&old.n)};
+  if(x.n)aiJudgeCloudStatus(x.k,x.r,message||'已保存到本机 · 云端暂未同步，将自动重试',true);
+ });
+ aiJudgeCloudRetry=Math.min(6,aiJudgeCloudRetry+1);
+ if(aiJudgeCloudT)clearTimeout(aiJudgeCloudT);
+ aiJudgeCloudT=setTimeout(aiJudgeCloudFlush,Math.min(60000,2000*Math.pow(2,aiJudgeCloudRetry-1)));
+}
+function aiJudgeCloudFlush(){
+ aiJudgeCloudT=null;
+ var keys=Object.keys(aiJudgeCloudQueue);if(!keys.length||!sb)return;
+ var batch=keys.map(function(k){var x=aiJudgeCloudQueue[k];delete aiJudgeCloudQueue[k];return{k:k,r:x.r,n:!!x.n};});
+ var rows=batch.map(function(x){return{id:aiJudgeCloudId(x.k),owner:SB_ID,question_key:x.k,source_signature:x.r.s,
+  record:x.r,recorded_at:new Date(x.r.t||Date.now()).toISOString(),updated_at:new Date().toISOString()};});
+ try{
+  sb.from('ai_judge_records').upsert(rows).then(function(res){
+   if(res&&res.error){console.warn('judge cloud push:',res.error.message);aiJudgeCloudRequeue(batch);return;}
+   aiJudgeCloudRetry=0;aiJudgeCloudMetaPut(batch);
+   batch.forEach(function(x){if(x.n)aiJudgeCloudStatus(x.k,x.r,'解析已永久保存到云端',false);});
+  }).catch(function(){aiJudgeCloudRequeue(batch);});
+ }catch(e){aiJudgeCloudRequeue(batch);}
+}
+function aiJudgeCloudQueuePut(key,r,notify){
+ if(!key||!aiJudgeCloudRecord(r))return;
+ if(!sb){if(notify)aiJudgeCloudStatus(key,r,'已保存到本机 · 云端当前不可用，将自动补传',true);return;}
+ var old=aiJudgeCloudQueue[key];
+ if(!old||!old.r||old.r.t<=r.t)aiJudgeCloudQueue[key]={r:r,n:!!notify||(old&&old.n)};
+ if(aiJudgeCloudT)clearTimeout(aiJudgeCloudT);
+ aiJudgeCloudT=setTimeout(aiJudgeCloudFlush,notify?900:1600);
+}
+function aiJudgeCloudFetch(id,localRec){
+ if(!sb||!id)return;
+ var token=id.key+'|'+id.sig;if(aiJudgeCloudFetches[token])return;
+ aiJudgeCloudFetches[token]=true;
+ try{
+  sb.from('ai_judge_records').select('question_key,record,recorded_at').eq('id',aiJudgeCloudId(id.key)).maybeSingle().then(function(res){
+   delete aiJudgeCloudFetches[token];
+   if(res&&res.error){
+    if(localRec)aiJudgeCloudStatus(id.key,localRec,'已从本机恢复 · 云端暂时不可用，将自动重试',true);
+    return;
+   }
+   var p=res&&res.data,cloud=p&&p.question_key===id.key?p.record:null;
+   var latest=aiJudgeGet(id);
+   if(aiJudgeCloudRecord(cloud)&&cloud.s===id.sig&&(!latest||cloud.t>latest.t)){
+    if(aiJudgeLocalPut(id.key,cloud)){
+     aiJudgeCloudMetaPut([{k:id.key,r:cloud}]);
+     if(aiJudgeIsCurrentNow&&aiJudgeIsCurrentNow(id)&&!aiBusy&&aiJudgeRestoreCurrent)aiJudgeRestoreCurrent(true);
+    }
+    return;
+   }
+   if(latest&&(!aiJudgeCloudRecord(cloud)||cloud.s!==id.sig||latest.t>cloud.t))aiJudgeCloudQueuePut(id.key,latest,true);
+   else if(latest&&cloud&&latest.t===cloud.t){
+    aiJudgeCloudMetaPut([{k:id.key,r:latest}]);
+    aiJudgeCloudStatus(id.key,latest,'解析已永久保存到云端',false);
+   }
+  }).catch(function(){
+   delete aiJudgeCloudFetches[token];
+   if(localRec)aiJudgeCloudStatus(id.key,localRec,'已从本机恢复 · 云端暂时不可用，将自动重试',true);
+  });
+ }catch(e){delete aiJudgeCloudFetches[token];}
+}
+function aiJudgeCloudMigrate(){
+ var c=aiJudgeAll(),m=aiJudgeCloudMeta();
+ Object.keys(c).forEach(function(k){var r=c[k];if(aiJudgeCloudRecord(r)&&(!m[k]||m[k]<r.t))aiJudgeCloudQueuePut(k,r,false);});
 }
 function aiJudgeIdentity(){
  if(aiMode==='ci'&&aiCiSrc==='vocab'&&aiVItem){
@@ -780,14 +871,15 @@ function aiJudgeGet(id){
 }
 function aiJudgePut(id,input,output,verdict,route,cacheKey){
  if(!id||!output)return null;
- try{
-  var c=aiJudgeAll();
-  var r={v:1,k:id.kind,q:id.q,s:id.sig,u:String(input==null?'':input),x:String(output),ok:verdict,
-   t:Date.now(),m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null,
-   l:route&&route.label?route.label:'',c:cacheKey||''};
-  c[id.key]=r;aiJudgeTrim(c);localStorage.setItem(AIJK,JSON.stringify(c));return r;
- }catch(e){console.warn('judge save:',e);return null;}
+ var r={v:2,k:id.kind,q:id.q,s:id.sig,u:String(input==null?'':input),x:String(output),ok:verdict,
+  t:Date.now(),m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null,
+  l:route&&route.label?route.label:'',c:cacheKey||''};
+ var localOk=aiJudgeLocalPut(id.key,r);
+ aiJudgeCloudQueuePut(id.key,r,true);
+ return localOk?r:null;
 }
+setTimeout(aiJudgeCloudMigrate,800);
+window.addEventListener('online',function(){aiJudgeCloudMigrate();if(Object.keys(aiJudgeCloudQueue).length)aiJudgeCloudFlush();});
 
 function aiRefresh(){if(aiBusy)aiCancelRequest();document.getElementById('view').innerHTML=aiView();bindAI();}
 function aiLabelM(m){for(var i=0;i<AI_MODELS.length;i++)if(AI_MODELS[i][0]===m)return AI_MODELS[i][1];return m;}
@@ -993,6 +1085,9 @@ function aiExpCloudPull(){
  }catch(e){}
 }
 aiExpCloudPull();
+/* 旧版在 Supabase 暂停期间生成的本机讲解，恢复联网后自动整卷补传。 */
+setTimeout(function(){if(Object.keys(aiExpAll()).length)aiExpCloudPush();},5200);
+window.addEventListener('online',function(){if(Object.keys(aiExpAll()).length)aiExpCloudPush();});
 
 /* ---- 卡片讲解后台任务：按 cardKey 隔离，可并行、可收起、可单独停止 ---- */
 var aiCardJobs=Object.create(null);var aiCardJobSeq=0;var AI_CARD_JOB_HISTORY=24;
@@ -1490,7 +1585,7 @@ function bindAI(){
   }
   var effort=rec.e&&AI_EFFORT_META[rec.e]?AI_EFFORT_META[rec.e].label:(rec.e||'旧档位');
   var model=rec.m==='kimi-k3'?'Kimi K3':(rec.m||'旧版模型');
-  f.innerHTML='<span>📌 '+esc(note||'解析已保存到本机')+' · '+aiJudgeDate(rec.t)+' · '+esc(model+' '+effort)+'</span>'
+  f.innerHTML='<span>📌 '+esc(note||'解析已保存到本机 · 正在同步云端')+' · '+aiJudgeDate(rec.t)+' · '+esc(model+' '+effort)+'</span>'
    +'<button type="button" class="ai-pick" id="aiJudgeReask">按当前档位重新判分并覆盖</button>';
   var rb=document.getElementById('aiJudgeReask');if(rb)rb.addEventListener('click',function(){aiDoSend(true);});
  }
@@ -1503,16 +1598,18 @@ function bindAI(){
   var old=document.getElementById('aiJudgeOld');if(old)old.addEventListener('click',function(){aiJudgeRestore();});
   var retry=document.getElementById('aiJudgeRetry');if(retry)retry.addEventListener('click',function(){aiDoSend(true);});
  }
- function aiJudgeRestore(){
+ function aiJudgeRestore(fromCloud){
   if(aiBusy)return false;
-  var id=aiJudgeIdentity(),rec=aiJudgeGet(id);if(!rec)return false;
+  var id=aiJudgeIdentity(),rec=aiJudgeGet(id);
+  if(!rec){if(!fromCloud)aiJudgeCloudFetch(id,null);return false;}
   var inp=document.getElementById('aiInput'),out=document.getElementById('aiOut');
   if(!inp||!out)return false;
   inp.value=typeof rec.u==='string'?rec.u:'';
   aiAnswerShow();aiPaint(out,aiMd(rec.x));
   var verdict=Object.prototype.hasOwnProperty.call(rec,'ok')?rec.ok:aiVerdictOf(rec.x,aiMode);
   aiShowMark(verdict);
-  aiJudgeFoot(rec,'已恢复本机保存解析 · 本次未耗额度');
+  aiJudgeFoot(rec,fromCloud?'已从云端恢复永久保存解析 · 本次未耗额度':'已恢复保存解析 · 正在核对云端 · 本次未耗额度');
+  if(!fromCloud)aiJudgeCloudFetch(id,rec);
   return true;
  }
  function aiDoSend(force){
@@ -1544,7 +1641,7 @@ function bindAI(){
     var saved0=aiJudgePut(judgeId,txt,hit,v0,route,ck);
     aiShowMark(v0);
     if(!(judgePrevious&&judgePrevious.c===ck))tdOnJudged(v0,hit);
-    if(judgeId)aiJudgeFoot(saved0,saved0?'同一作答的缓存解析已保存到本机 · 本次未耗额度':'缓存解析已读取，但浏览器存储失败；本次没有保存',!saved0);
+    if(judgeId)aiJudgeFoot(saved0,saved0?'同一作答的缓存解析已保存到本机 · 正在同步云端 · 本次未耗额度':'缓存解析已读取，本机存储失败；正在尝试云端永久保存',!saved0);
     else if(f){f.className='ai-foot show';f.innerHTML='⚡ '+esc(route.label)+' · 同一作答已判过，这是本地缓存结果（未消耗额度）· <button class="ai-pick" id="aiReask">重新判分</button>';
      var rb=document.getElementById('aiReask');if(rb)rb.addEventListener('click',function(){aiDoSend(true);});}
     return;
@@ -1569,11 +1666,11 @@ function bindAI(){
     if(!judgeId||aiJudgeIsCurrent(judgeId)){
      if(!(force&&sameSavedAnswer)){aiFeedbackShow(v);tdOnJudged(v,text);}
      aiShowMark(v);
-     if(judgeId)aiJudgeFoot(saved,saved?((force&&judgePrevious?'新解析已覆盖保存到本机':'解析已保存到本机')+' · 用时 '+(ms/1000).toFixed(1)+'s'):'解析已生成，但浏览器存储失败；原保存内容没有被覆盖',!saved);
+     if(judgeId)aiJudgeFoot(saved,saved?((force&&judgePrevious?'新解析已覆盖保存到本机':'解析已保存到本机')+' · 正在同步云端 · 用时 '+(ms/1000).toFixed(1)+'s'):'解析已生成，本机存储失败；正在尝试云端永久保存',!saved);
      else if(f2){f2.className='ai-foot show';f2.textContent=route.label+' · 模型 '+mdl+' · 用时 '+(ms/1000).toFixed(1)+'s · 内容由 AI 生成，重要译法请以官方双语为准';}
     }
    }else if(judgeId&&aiJudgeIsCurrent(judgeId)){
-    if(judgePrevious){aiJudgeRestore();aiJudgeFoot(judgePrevious,'本次判分未完成，已恢复上次本机解析',true);}
+    if(judgePrevious){aiJudgeRestore();aiJudgeFoot(judgePrevious,'本次判分未完成，已恢复上次保存解析',true);}
     else aiJudgeFailureFoot(null);
    }
    else if(cur==='ai'&&aiJudgeRestoreCurrent)aiJudgeRestoreCurrent();
@@ -1582,7 +1679,7 @@ function bindAI(){
  var _sd=$('aiSend');if(_sd)_sd.addEventListener('click',function(){aiDoSend(false);});
  var _sp=$('aiStop');if(_sp)_sp.addEventListener('click',function(){aiCancelRequest();});
  bindAiTd($);
- aiJudgeRestoreCurrent=aiJudgeRestore;
+ aiJudgeRestoreCurrent=aiJudgeRestore;aiJudgeFootCurrent=aiJudgeFoot;aiJudgeIsCurrentNow=aiJudgeIsCurrent;
  aiJudgeRestore();
 }
 
