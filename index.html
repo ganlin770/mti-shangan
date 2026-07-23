@@ -1448,13 +1448,51 @@ openQuiz=function(ty){
  renderQuiz();
 };
 var _qzRenderQuiz=renderQuiz;
+function qMsSection(kind,title){
+ var section=document.createElement('section');section.className='qms-section '+kind;
+ var heading=document.createElement('h3');heading.className='qms-title';heading.textContent=title;
+ section.appendChild(heading);return section;
+}
+function qMsPointItems(raw,context){
+ var text=String(raw||'');var items=text.split(/\s+·\s+|\s*[；;]\s*|\n+/);
+ if(items.length===1&&(text.match(/·/g)||[]).length>1){
+  var parts=text.split(/\s*·\s*/);var prose=String(context||'');items=[];
+  for(var i=0;i<parts.length;){
+   var take=1;var max=Math.min(5,parts.length-i);
+   for(var n=max;n>1;n--){if(prose.indexOf(parts.slice(i,i+n).join('·'))>=0){take=n;break;}}
+   items.push(parts.slice(i,i+take).join('·'));i+=take;
+  }
+ }
+ return items.map(function(s){return s.trim();}).filter(Boolean);
+}
+function qMsDecorate(x){
+ if(!x||x.type!=='名解')return;
+ var card=document.getElementById('qc');var back=card&&card.querySelector('.ffb');
+ if(!card||!back||back.classList.contains('qms-back'))return;
+ card.classList.add('qcard-ms');
+ back.className='ff ffb qms-back';back.removeAttribute('style');back.setAttribute('aria-label','名词解释参考答案');back.textContent='';
+ var sheet=document.createElement('div');sheet.className='qms-sheet';
+ var primary=qMsSection('is-primary','可背诵答案');
+ var answer=document.createElement('p');answer.className='qms-answer';answer.textContent=x.a||'';primary.appendChild(answer);sheet.appendChild(primary);
+ var points=qMsPointItems(x.m,(x.q||'')+' '+(x.a||''));
+ if(points.length){
+  var pointSection=qMsSection('is-points','采分点');var list=document.createElement('ol');list.className='qms-points';
+  points.forEach(function(point){var item=document.createElement('li');item.textContent=point;list.appendChild(item);});
+  pointSection.appendChild(list);sheet.appendChild(pointSection);
+ }
+ var mnemonic=typeof MN!=='undefined'&&MN[x.q];
+ if(mnemonic){
+  var memory=qMsSection('is-memory','记忆口诀');var memoryText=document.createElement('p');memoryText.textContent=mnemonic;memory.appendChild(memoryText);sheet.appendChild(memory);
+ }
+ back.appendChild(sheet);
+}
 renderQuiz=function(){
  var r=_qzRenderQuiz.apply(this,arguments);
  var _qb=document.getElementById('aiQuizBtn');
  if(_qb){_qb.disabled=qi>=queue.length;
   var _qx=queue[qi];var _qs=_qb.querySelector('span');
   if(_qs)_qs.textContent=(_qx&&aiExpGet(_qx.key))?'查看讲解（已保存）':'AI 讲解这张卡';}
- if(qi<queue.length){var _mx=queue[qi];if(_mx&&_mx.type==='名解'&&typeof MN!=='undefined'&&MN[_mx.q]){var _fb=document.querySelector('#qc .ffb');if(_fb&&!_fb.querySelector('.mn-line')){var _d=document.createElement('div');_d.className='maid mn-line';_d.textContent='🪄 口诀 · '+MN[_mx.q];_fb.appendChild(_d);}}
+ if(qi<queue.length){var _mx=queue[qi];qMsDecorate(_mx);
   var _bt=document.querySelector('#quizbox .qbtns');
   if(_bt&&!document.querySelector('#quizbox .qret-row')){
    var _rw=document.createElement('div');_rw.className='qret-row';
@@ -1979,6 +2017,35 @@ setNav();
 .td-bar{height:5px;background:rgba(46,74,56,.10);border-radius:99px;margin-top:7px;overflow:hidden;max-width:340px}
 .td-bar i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .3s}
 .td-gt{border-top:2px dashed var(--line);margin-top:4px;padding-top:12px}
+
+/* 名解抽背翻面：与左侧 AI 讲解共用同一套纸张式阅读层级。 */
+#qc.qcard-ms .qms-back{align-items:stretch;justify-content:flex-start;gap:0;padding:24px clamp(18px,2.4vw,30px) 28px;background:var(--paper)!important;color:var(--ink);border:1px solid var(--line);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;text-align:left}
+#qc.qcard-ms .qms-sheet{display:flex;flex-direction:column;gap:14px;width:100%;max-width:680px;margin:0 auto}
+#qc.qcard-ms .qms-section{width:100%;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 1px 0 rgba(54,47,34,.03)}
+#qc.qcard-ms .qms-section.is-primary{padding:21px 24px;border-left:4px solid var(--green);background:rgba(46,74,56,.045)}
+#qc.qcard-ms .qms-title{margin:0 0 11px;padding-left:12px;border-left:4px solid var(--green);font-family:"Noto Serif SC",serif;font-size:19px;font-weight:700;line-height:1.45;color:var(--green2)}
+#qc.qcard-ms .qms-answer{margin:0;font-size:18px;line-height:1.9;letter-spacing:.01em;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+#qc.qcard-ms .qms-points{counter-reset:qmsPoint;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--paper);overflow:hidden;list-style:none}
+#qc.qcard-ms .qms-points li{counter-increment:qmsPoint;position:relative;margin:0;padding:10px 12px 10px 42px;border-bottom:1px solid var(--line);font-size:15.5px;line-height:1.65;color:var(--ink);overflow-wrap:anywhere}
+#qc.qcard-ms .qms-points li:last-child{border-bottom:0}
+#qc.qcard-ms .qms-points li::before{content:counter(qmsPoint);position:absolute;left:13px;top:13px;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:var(--green);color:var(--paper);font-size:10px;font-weight:700;line-height:1}
+#qc.qcard-ms .qms-section.is-memory{background:rgba(196,158,66,.065)}
+#qc.qcard-ms .qms-section.is-memory p{margin:0;font-size:15.5px;line-height:1.75;color:var(--ink);overflow-wrap:anywhere}
+#quizbox .qnav button,#quizbox .qret{min-height:44px}
+@media (min-width:900px){
+ .ovl.on #qc.qcard-ms{height:clamp(440px,58vh,660px)}
+}
+@media (max-width:899.98px){
+ .ovl.on{align-items:flex-start;overflow-y:auto;padding-bottom:92px}
+ #qc.qcard-ms .qms-back{padding:12px;scrollbar-gutter:auto}
+ #qc.qcard-ms .qms-sheet{max-width:none;gap:10px}
+ #qc.qcard-ms .qms-section,#qc.qcard-ms .qms-section.is-primary{padding:14px}
+ #qc.qcard-ms .qms-title{margin-bottom:9px;font-size:17px}
+ #qc.qcard-ms .qms-answer{font-size:16px;line-height:1.82}
+ #qc.qcard-ms .qms-points li{padding:9px 10px 9px 38px;font-size:14.5px;line-height:1.65}
+ #qc.qcard-ms .qms-points li::before{left:10px;top:11px}
+ #qc.qcard-ms .qms-section.is-memory p{font-size:14.5px;line-height:1.7}
+}
 
 /* Kimi K3 思考深度：所有生成入口共用一套紧凑分段控件。 */
 .ai-route-note{justify-content:space-between;gap:12px;padding:10px 12px;flex-wrap:wrap}
