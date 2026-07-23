@@ -192,7 +192,7 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .ai-deep-send:disabled{opacity:.45;cursor:default}
 .ai-stop{border:1px solid var(--line);background:var(--card);color:var(--rust);border-radius:10px;padding:10px 16px;font-family:inherit;font-size:13px;cursor:pointer;display:none}
 .ai-stop.show{display:inline-block}
-.ai-out{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;font-size:14.5px;line-height:2;display:none;word-break:break-word}
+.ai-out{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;font-size:14.5px;line-height:2;display:none;word-break:break-word;overflow-anchor:none}
 .ai-out.show{display:block}
 .ai-answer{display:none;margin-top:-2px;padding:13px 17px;border:1px solid var(--green);border-left:4px solid var(--green);border-radius:12px;background:linear-gradient(180deg,rgba(46,74,56,.075),rgba(46,74,56,.02));word-break:break-word}
 .ai-answer.show{display:block;animation:aifb .18s ease}
@@ -781,7 +781,13 @@ function aiPanelArrange(el){
 /* ---- 流式请求（按 id 现查，免疫重渲染）---- */
 function aiPaint(target,html){
  var el=typeof target==='string'?document.getElementById(target):target;
- if(!el)return;el.classList.add('show');el.innerHTML=html;aiPanelArrange(el);
+ if(!el)return;
+ var scroller=el.classList.contains('ai-panel-body')?el:(el.closest&&el.closest('.ai-panel-body'));
+ var keepTop=scroller?scroller.scrollTop:0;var keepLeft=scroller?scroller.scrollLeft:0;
+ var keepX=window.scrollX||window.pageXOffset||0;var keepY=window.scrollY||window.pageYOffset||0;
+ el.classList.add('show');el.innerHTML=html;aiPanelArrange(el);
+ if(scroller){scroller.scrollTop=keepTop;scroller.scrollLeft=keepLeft;}
+ if((window.scrollX||window.pageXOffset||0)!==keepX||(window.scrollY||window.pageYOffset||0)!==keepY)window.scrollTo(keepX,keepY);
 }
 function aiCancelRequest(){
  if(aiRetryT){
@@ -952,9 +958,8 @@ function aiAskGo(panel){
  var blk=document.createElement('div');blk.className='ai-ask-block';
  blk.innerHTML='<div class="ai-ask-q">❓ '+esc(q)+'</div><div class="ai-ask-a"></div>';
  body.appendChild(blk);
- body.scrollTop=body.scrollHeight;
  inp.value='';
- aiStream(aiAskPrompt(x,q),blk.querySelector('.ai-ask-a'),function(){body.scrollTop=body.scrollHeight;},aiRoute('followup',false));
+ aiStream(aiAskPrompt(x,q),blk.querySelector('.ai-ask-a'),null,aiRoute('followup',false));
 }
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
