@@ -930,7 +930,7 @@ function aiPanelArrange(el){
    var kind=/采分点|考点与判分/.test(title)?' is-points':(/记忆钩子|拆解与记忆/.test(title)?' is-memory':(/延伸备考|扩展积累/.test(title)?' is-secondary':''));
    newSection(kind);section.appendChild(node);return;
   }
-  if(node.nodeType===1&&(node.classList.contains('ai-exp-bar')||node.classList.contains('ai-card-jobbar'))){
+  if(node.nodeType===1&&(node.classList.contains('ai-exp-bar')||node.classList.contains('ai-card-jobbar')||node.classList.contains('ai-ask-history'))){
    section=null;frag.appendChild(node);return;
   }
   if(!section)newSection('');
@@ -1061,13 +1061,28 @@ function aiExpAll(){try{return JSON.parse(localStorage.getItem(AIEK)||'{}')}catc
 function aiExpGet(k){var c=aiExpAll();return c[k]||null;}
 function aiExpPut(k,text,route){
  try{
-  var c=aiExpAll();c[k]={x:text,t:Date.now(),m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null};
+  var c=aiExpAll(),old=c[k]||{},now=Date.now();
+  c[k]={x:text,t:now,u:now,m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null,
+   qa:Array.isArray(old.qa)?old.qa:[]};
   var ks=Object.keys(c);
-  if(ks.length>300){ks.sort(function(a,b){return c[a].t-c[b].t;});ks.slice(0,ks.length-300).forEach(function(d){delete c[d];});}
+  if(ks.length>300){ks.sort(function(a,b){return (c[a].u||c[a].t||0)-(c[b].u||c[b].t||0);});ks.slice(0,ks.length-300).forEach(function(d){delete c[d];});}
   localStorage.setItem(AIEK,JSON.stringify(c));
   aiExpCloudPush();
   return true;
  }catch(e){console.warn('exp save:',e);return false;}
+}
+function aiExpQaPut(k,q,text,route){
+ try{
+  var c=aiExpAll(),r=c[k];
+  if(!r||!r.x||!text)return false;
+  var now=Date.now(),qa=Array.isArray(r.qa)?r.qa.slice():[];
+  qa.push({id:String(now)+'-'+Math.random().toString(36).slice(2,8),q:String(q),a:String(text),t:now,
+   m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null});
+  r.qa=qa;r.u=now;c[k]=r;
+  localStorage.setItem(AIEK,JSON.stringify(c));
+  aiExpCloudPush();
+  return true;
+ }catch(e){console.warn('follow-up save:',e);return false;}
 }
 /* 讲解云同步：独立行(SB_ID+'_exp')，生成后防抖4s整卷推送；启动拉取按时间戳新者合并。
    网络不可达时静默降级为仅本机（与原站进度云同步同行为）。*/
@@ -1091,7 +1106,7 @@ function aiExpCloudPull(){
     if(!(r&&r.data&&r.data.payload))return;
     var cloud=r.data.payload;var loc=aiExpAll();var ch=false;
     for(var k in cloud){var cv=cloud[k],lv=loc[k];
-     if(cv&&cv.x&&(!lv||(cv.t||0)>(lv.t||0))){loc[k]=cv;ch=true;}}
+     if(cv&&cv.x&&(!lv||(cv.u||cv.t||0)>(lv.u||lv.t||0))){loc[k]=cv;ch=true;}}
     if(ch)localStorage.setItem(AIEK,JSON.stringify(loc));
    }catch(e){}
   });
@@ -1297,7 +1312,14 @@ function aiAskGo(panel){
  blk.innerHTML='<div class="ai-ask-q">❓ '+esc(q)+'</div><div class="ai-ask-a"></div>';
  body.appendChild(blk);
  inp.value='';
- aiStream(aiAskPrompt(x,q),blk.querySelector('.ai-ask-a'),null,aiRoute('followup',false));
+ var route=aiRoute('followup',false),cardKey=x.key||boundKey;
+ aiStream(aiAskPrompt(x,q),blk.querySelector('.ai-ask-a'),function(text){
+  if(!text)return;
+  var ok=aiExpQaPut(cardKey,q,text,route),tip=document.createElement('div');
+  tip.className='ai-ask-save '+(ok?'':'is-error');
+  tip.textContent=ok?'📌 追问已保存 · 正在同步云端':'⚠ 回答已生成，但保存失败';
+  blk.appendChild(tip);
+ },route);
 }
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
@@ -1362,10 +1384,26 @@ function aiRetMgrShow(){
  });
 }
 function aiExpDate(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
+function aiExpTime(t){
+ var d=new Date(t);return aiExpDate(t)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function aiExpModelName(m){
+ return m==='kimi-k3'?'Kimi K3（备用通道）':(m==='deepseek-v4-pro'?'DeepSeek V4 Pro（主模型）':(m||'旧版模型'));
+}
+function aiExpQaHtml(c){
+ var qa=Array.isArray(c.qa)?c.qa:[];
+ if(!qa.length)return '';
+ return '<div class="ai-ask-history"><div class="ai-ask-history-head">已保存的追问 <b>'+qa.length+'</b></div>'+
+  qa.map(function(v,i){
+   var model=aiExpModelName(v.m),effort=v.e&&AI_EFFORT_META[v.e]?AI_EFFORT_META[v.e].label:'旧版档位未知';
+   return '<div class="ai-ask-block is-saved"><div class="ai-ask-meta">追问 '+(i+1)+' · '+aiExpTime(v.t||c.t)+' · '+esc(model+' '+effort)+'</div>'+
+    '<div class="ai-ask-q">❓ '+esc(v.q||'')+'</div><div class="ai-ask-a">'+aiMd(v.a||'（无内容返回）')+'</div></div>';
+  }).join('')+'</div>';
+}
 function aiExpShow(body,key,c,notice){
- var model=c.m==='kimi-k3'?'Kimi K3（备用通道）':(c.m==='deepseek-v4-pro'?'DeepSeek V4 Pro（主模型）':(c.m||'旧版模型')),effort=c.e&&AI_EFFORT_META[c.e]?(model+' '+AI_EFFORT_META[c.e].label):'旧版档位未知';
+ var model=aiExpModelName(c.m),effort=c.e&&AI_EFFORT_META[c.e]?(model+' '+AI_EFFORT_META[c.e].label):'旧版档位未知';
  var bar='<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' · '+esc(effort)+' · 本次未耗额度<button type="button" class="ai-pick ai-exp-regen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">按当前档位重新生成并覆盖</button></div>';
- aiPaint(body,(notice||'')+aiMd(c.x)+bar);
+ aiPaint(body,(notice||'')+aiMd(c.x)+bar+aiExpQaHtml(c));
 }
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
@@ -2319,8 +2357,15 @@ setNav();
 .ai-ask-btn:hover{background:var(--green2)}
 .ai-ask-btn:disabled,.ai-ask-inp:disabled{opacity:.55;cursor:not-allowed}
 .ai-ask-block{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.ai-ask-history{margin-top:16px;padding:14px 16px 4px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.32)}
+.ai-ask-history-head{display:flex;align-items:center;gap:6px;color:var(--green2);font-size:13px;font-weight:700;letter-spacing:.04em}
+.ai-ask-history-head b{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:var(--green);color:#f3efe6;font-size:11px}
+.ai-ask-block.is-saved:first-of-type{margin-top:10px}
+.ai-ask-meta{margin-bottom:7px;color:var(--mut);font-size:11.5px;line-height:1.5}
 .ai-ask-q{font-weight:700;color:var(--green2);font-size:15px;margin-bottom:6px}
 .ai-ask-a{font-size:16px;line-height:2}
+.ai-ask-save{margin-top:8px;color:var(--mut);font-size:11.5px;line-height:1.5}
+.ai-ask-save.is-error{color:var(--rust)}
 .ai-wait{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:var(--mut);font-size:13px;padding:4px 0}
 .ai-wait.on{color:var(--green2)}
 .ai-wait b{font-weight:700}
