@@ -2594,36 +2594,42 @@ setNav();
 }
 
 /* 词条抽背翻面：保留原答案和助记，仅整理为与名解一致的纸张式层级。 */
-#qc.qcard-term .qterm-back{align-items:stretch;justify-content:flex-start;gap:0;padding:24px clamp(18px,2.4vw,30px) 28px;background:var(--paper)!important;color:var(--ink);border:1px solid var(--line);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;text-align:left}
-#qc.qcard-term .qterm-sheet{display:flex;flex-direction:column;gap:14px;width:100%;max-width:680px;margin:0 auto}
-#qc.qcard-term .qterm-section{width:100%;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 1px 0 rgba(54,47,34,.03)}
-#qc.qcard-term .qterm-section.is-primary{padding:21px 24px;border-left:4px solid var(--green);background:rgba(46,74,56,.045)}
-#qc.qcard-term .qterm-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
-#qc.qcard-term .qterm-title{margin:0;padding-left:12px;border-left:4px solid var(--green);font-family:"Noto Serif SC",serif;font-size:19px;font-weight:700;line-height:1.45;color:var(--green2)}
-#qc.qcard-term .qterm-answer{margin:0;color:var(--green2);font-family:Inter,"Helvetica Neue",Arial,sans-serif;font-weight:650;line-height:1.32;letter-spacing:.005em;white-space:pre-wrap;overflow-wrap:anywhere}
-#qc.qcard-term .qterm-sheet.is-short .qterm-answer{font-size:34px}
-#qc.qcard-term .qterm-sheet.is-medium .qterm-answer{font-size:28px}
-#qc.qcard-term .qterm-sheet.is-long .qterm-answer{font-size:22px;line-height:1.45}
-#qc.qcard-term .qterm-section.is-memory{background:rgba(196,158,66,.065)}
-#qc.qcard-term .qterm-section.is-memory .qterm-title{border-left-color:var(--gold)}
-#qc.qcard-term .qterm-memory{margin:12px 0 0;font-size:15.5px;line-height:1.75;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
-#qc.qcard-term .qterm-spk{position:static;display:flex;align-items:center;justify-content:center;flex:none;width:42px;height:42px;border:1px solid rgba(46,74,56,.22);border-radius:50%;background:rgba(46,74,56,.08);color:var(--green2)}
+#qc.qcard-term .qterm-back{align-items:stretch;justify-content:flex-start;gap:0;padding:28px clamp(24px,3.2vw,44px) 32px;background:var(--paper)!important;color:var(--ink);border:1px solid var(--line);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;text-align:left}
+#qc.qcard-term .qterm-sheet{display:flex;flex-direction:column;justify-content:center;gap:24px;width:100%;min-height:100%;max-width:760px;margin:0 auto;padding:20px 0}
+#qc.qcard-term .qterm-sheet.is-long{justify-content:flex-start}
+#qc.qcard-term .qterm-section{box-sizing:border-box;width:100%;padding:22px 26px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:0 8px 24px rgba(54,47,34,.055),0 1px 0 rgba(54,47,34,.04)}
+#qc.qcard-term .qterm-section.is-primary{position:relative;display:flex;flex-direction:column;justify-content:center;min-height:172px;padding:28px 32px;border-left:5px solid var(--green);background:linear-gradient(135deg,rgba(46,74,56,.07),rgba(255,255,255,.42));overflow:hidden}
+#qc.qcard-term .qterm-section.is-primary::after{content:"";position:absolute;right:-42px;bottom:-72px;width:190px;height:190px;border:1px solid rgba(46,74,56,.08);border-radius:50%;pointer-events:none}
+#qc.qcard-term .qterm-head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}
+#qc.qcard-term .qterm-title{margin:0;padding-left:12px;border-left:4px solid var(--green);font-family:"Noto Serif SC",serif;font-size:18px;font-weight:700;line-height:1.45;letter-spacing:.04em;color:var(--green2)}
+#qc.qcard-term .qterm-answer{position:relative;z-index:1;margin:0;color:var(--green2);font-family:"Noto Serif SC",Georgia,serif;font-weight:700;line-height:1.3;letter-spacing:.008em;white-space:pre-wrap;overflow-wrap:anywhere}
+#qc.qcard-term .qterm-sheet.is-short .qterm-answer{font-size:38px}
+#qc.qcard-term .qterm-sheet.is-medium .qterm-answer{font-size:30px}
+#qc.qcard-term .qterm-sheet.is-long .qterm-answer{font-size:23px;line-height:1.5}
+#qc.qcard-term .qterm-section.is-memory{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:start;column-gap:24px;padding:22px 26px;background:linear-gradient(135deg,rgba(196,158,66,.09),rgba(255,255,255,.34))}
+#qc.qcard-term .qterm-section.is-memory .qterm-title{display:flex;align-items:center;gap:9px;margin-top:2px;padding:0;border:0;font-size:15px;letter-spacing:.08em;color:#8a6d1f}
+#qc.qcard-term .qterm-section.is-memory .qterm-title::before{content:"";width:8px;height:8px;flex:none;border-radius:50%;background:var(--gold);box-shadow:0 0 0 5px rgba(196,158,66,.12)}
+#qc.qcard-term .qterm-memory{margin:0;padding-left:24px;border-left:1px solid rgba(146,116,40,.26);font-size:16px;line-height:1.85;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+#qc.qcard-term .qterm-spk{position:static;display:flex;align-items:center;justify-content:center;flex:none;width:46px;height:46px;border:1px solid rgba(46,74,56,.22);border-radius:50%;background:rgba(46,74,56,.08);color:var(--green2);box-shadow:0 4px 12px rgba(46,74,56,.08)}
 #qc.qcard-term .qterm-spk svg{width:20px;height:20px;fill:var(--green2)}
 #qc.qcard-term .qterm-spk:hover{background:rgba(46,74,56,.14)}
 @media (min-width:900px){
  .ovl.on #qc.qcard-term{height:clamp(440px,58vh,660px)}
 }
 @media (max-width:899.98px){
- #qc.qcard-term .qterm-back{padding:12px;scrollbar-gutter:auto}
- #qc.qcard-term .qterm-sheet{max-width:none;gap:10px}
- #qc.qcard-term .qterm-section,#qc.qcard-term .qterm-section.is-primary{padding:14px}
- #qc.qcard-term .qterm-head{margin-bottom:12px}
- #qc.qcard-term .qterm-title{font-size:17px}
- #qc.qcard-term .qterm-sheet.is-short .qterm-answer{font-size:26px}
+ #qc.qcard-term .qterm-back{padding:14px;scrollbar-gutter:auto}
+ #qc.qcard-term .qterm-sheet{max-width:none;gap:14px;padding:8px 0}
+ #qc.qcard-term .qterm-section{padding:17px 18px;border-radius:13px}
+ #qc.qcard-term .qterm-section.is-primary{min-height:136px;padding:19px 20px}
+ #qc.qcard-term .qterm-head{gap:12px;margin-bottom:15px}
+ #qc.qcard-term .qterm-title{font-size:16.5px}
+ #qc.qcard-term .qterm-sheet.is-short .qterm-answer{font-size:28px}
  #qc.qcard-term .qterm-sheet.is-medium .qterm-answer{font-size:23px}
- #qc.qcard-term .qterm-sheet.is-long .qterm-answer{font-size:19px;line-height:1.5}
- #qc.qcard-term .qterm-memory{margin-top:9px;font-size:14.5px;line-height:1.7}
- #qc.qcard-term .qterm-spk{width:38px;height:38px}
+ #qc.qcard-term .qterm-sheet.is-long .qterm-answer{font-size:18.5px;line-height:1.5}
+ #qc.qcard-term .qterm-section.is-memory{display:block;padding:17px 18px}
+ #qc.qcard-term .qterm-section.is-memory .qterm-title{margin:0 0 12px}
+ #qc.qcard-term .qterm-memory{padding:12px 0 0;border-left:0;border-top:1px solid rgba(146,116,40,.24);font-size:14.5px;line-height:1.75}
+ #qc.qcard-term .qterm-spk{width:40px;height:40px}
 }
 
 /* Kimi K3 思考深度：所有生成入口共用一套紧凑分段控件。 */
