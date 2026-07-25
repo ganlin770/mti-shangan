@@ -1055,67 +1055,134 @@ function aiCardPrompt(x){
  }
  return base+spec+'\n排版铁律：只用 ### 小标题、**粗体**、「- 」无序列表；禁用表格/代码块/引用块/#与##标题/有序列表。所有内容必须具体到词句、可背诵可落笔，不写「多积累」式空话。';
 }
-/* ---- 讲解结果本机保存：按卡 key 持久（LRU 300），秒开不耗额度，可重新生成 ---- */
-var AIEK='mti_ai_explain';
-function aiExpAll(){try{return JSON.parse(localStorage.getItem(AIEK)||'{}')}catch(e){return {}}}
-function aiExpGet(k){var c=aiExpAll();return c[k]||null;}
+/* ---- 讲解与追问保存：本机 LRU 秒开 + Supabase 逐卡/逐条永久保存 ---- */
+var AIEK='mti_ai_explain';var AIEXP_MAX=300;var aiExpMem=Object.create(null);
+var AIEXP_CARD_PREFIX=SB_ID+'_expcard_',AIEXP_QA_PREFIX=SB_ID+'_expqa_';
+var aiExpCloudQueue=Object.create(null),aiExpCloudT=null,aiExpCloudRetry=0,aiExpCloudFetches=Object.create(null);
+function aiExpAll(){try{var c=JSON.parse(localStorage.getItem(AIEK)||'{}');return c&&typeof c==='object'?c:{}}catch(e){return {}}}
+function aiExpGet(k){var c=aiExpAll();return c[k]||aiExpMem[k]||null;}
+function aiExpTrim(c,keep){
+ var ks=Object.keys(c);
+ if(ks.length<=AIEXP_MAX)return c;
+ ks.sort(function(a,b){return (c[a].u||c[a].t||0)-(c[b].u||c[b].t||0);});
+ ks.forEach(function(k){if(Object.keys(c).length>AIEXP_MAX&&k!==keep)delete c[k];});return c;
+}
+function aiExpLocalPut(k,r){
+ aiExpMem[k]=r;var c=aiExpAll();c[k]=r;aiExpTrim(c,k);
+ for(var pass=0;pass<8;pass++){
+  try{localStorage.setItem(AIEK,JSON.stringify(c));return true;}
+  catch(e){
+   var ks=Object.keys(c).filter(function(x){return x!==k;});
+   if(!ks.length){console.warn('exp local save:',e);return false;}
+   ks.sort(function(a,b){return (c[a].u||c[a].t||0)-(c[b].u||c[b].t||0);});
+   ks.slice(0,Math.max(1,Math.ceil(ks.length/5))).forEach(function(x){delete c[x];});
+  }
+ }
+ return false;
+}
+function aiExpCloudKey(k){return encodeURIComponent(String(k)).replace(/%/g,'~');}
+function aiExpCloudCardId(k){return AIEXP_CARD_PREFIX+aiExpCloudKey(k);}
+function aiExpCloudQaId(k,id){return AIEXP_QA_PREFIX+aiExpCloudKey(k)+'_'+String(id);}
+function aiExpCloudRowQueue(id,payload,updated,cb){
+ if(!sb)return false;
+ var old=aiExpCloudQueue[id],callbacks=old&&old.callbacks?old.callbacks.slice():[];
+ if(typeof cb==='function')callbacks.push(cb);
+ aiExpCloudQueue[id]={row:{id:id,payload:payload,updated_at:new Date(updated||Date.now()).toISOString()},callbacks:callbacks,warned:old&&old.warned};
+ if(aiExpCloudT)clearTimeout(aiExpCloudT);
+ aiExpCloudT=setTimeout(aiExpCloudFlush,240);return true;
+}
+function aiExpCloudMainQueue(k,r){
+ if(!r||!r.x)return false;
+ var main={x:String(r.x),t:r.t||Date.now(),u:r.u||r.t||Date.now(),m:r.m||null,e:r.e||null};
+ return aiExpCloudRowQueue(aiExpCloudCardId(k),{v:3,kind:'main',card_key:k,record:main},main.u);
+}
+function aiExpCloudQaQueue(k,qa,mainText,cb){
+ if(!qa||!qa.id||!qa.a)return false;
+ return aiExpCloudRowQueue(aiExpCloudQaId(k,qa.id),{v:3,kind:'followup',card_key:k,main_x:String(mainText||''),qa:qa},qa.t,cb);
+}
+function aiExpCloudRequeue(batch,message){
+ batch.forEach(function(item){
+  if(!item.warned){item.callbacks.forEach(function(cb){try{cb(false,message);}catch(e){}});item.warned=true;}
+  var old=aiExpCloudQueue[item.row.id];
+  if(old&&new Date(old.row.updated_at)>=new Date(item.row.updated_at))old.callbacks=old.callbacks.concat(item.callbacks);
+  else aiExpCloudQueue[item.row.id]=item;
+ });
+ aiExpCloudRetry=Math.min(6,aiExpCloudRetry+1);
+ if(aiExpCloudT)clearTimeout(aiExpCloudT);
+ aiExpCloudT=setTimeout(aiExpCloudFlush,Math.min(60000,1200*Math.pow(2,aiExpCloudRetry-1)));
+}
+function aiExpCloudFlush(){
+ aiExpCloudT=null;var ids=Object.keys(aiExpCloudQueue);if(!ids.length||!sb)return;
+ var batch=ids.map(function(id){var x=aiExpCloudQueue[id];delete aiExpCloudQueue[id];return x;});
+ try{
+  sb.from('progress').upsert(batch.map(function(x){return x.row;})).then(function(res){
+   if(res&&res.error){console.warn('exp cloud push:',res.error.message);aiExpCloudRequeue(batch,res.error.message);return;}
+   aiExpCloudRetry=0;batch.forEach(function(item){item.callbacks.forEach(function(cb){try{cb(true);}catch(e){}});});
+  }).catch(function(e){aiExpCloudRequeue(batch,e&&e.message);});
+ }catch(e){aiExpCloudRequeue(batch,e&&e.message);}
+}
+function aiExpMergeQa(r,qa){
+ var list=Array.isArray(r.qa)?r.qa.slice():[];
+ if(!list.some(function(x){return x&&x.id===qa.id;}))list.push(qa);
+ list.sort(function(a,b){return (a.t||0)-(b.t||0);});r.qa=list;r.u=Math.max(r.u||r.t||0,qa.t||0);return r;
+}
+function aiExpCloudMergeCard(k,mainRows,qaRows){
+ var r=aiExpGet(k)||{x:'',t:0,u:0,m:null,e:null,qa:[]},changed=false;
+ (mainRows||[]).forEach(function(row){var p=row&&row.payload,cr=p&&p.kind==='main'&&p.card_key===k?p.record:null;
+  if(cr&&cr.x&&(!r.x||(cr.t||0)>(r.t||0))){var oldQa=Array.isArray(r.qa)?r.qa:[];r=Object.assign({},cr,{qa:oldQa});changed=true;}});
+ (qaRows||[]).forEach(function(row){var p=row&&row.payload,qa=p&&p.kind==='followup'&&p.card_key===k?p.qa:null;
+  if(!qa||!qa.id||!qa.a)return;
+  if(!r.x&&p.main_x){r.x=String(p.main_x);r.t=qa.t||Date.now();r.m=qa.m||r.m;r.e=qa.e||r.e;changed=true;}
+  var before=Array.isArray(r.qa)?r.qa.length:0;aiExpMergeQa(r,qa);if((r.qa||[]).length!==before)changed=true;
+ });
+ if(changed){aiExpLocalPut(k,r);var panels=typeof aiCardPanels==='function'?aiCardPanels(k):[];
+  panels.forEach(function(panel){if(!aiCardJobActive(aiCardJobs[k])){var body=panel.querySelector('.ai-panel-body');if(body)aiExpShow(body,k,r);}});
+  if(typeof aiCardSyncButtons==='function')aiCardSyncButtons(k);}
+}
+function aiExpCloudFetchCard(k){
+ if(!sb||!k||aiExpCloudFetches[k])return;
+ aiExpCloudFetches[k]=true;var qaPrefix=AIEXP_QA_PREFIX+aiExpCloudKey(k)+'_';
+ try{
+  Promise.all([
+   sb.from('progress').select('payload').eq('id',aiExpCloudCardId(k)).maybeSingle(),
+   sb.from('progress').select('payload').like('id',qaPrefix+'%').order('updated_at',{ascending:true})
+  ]).then(function(rows){delete aiExpCloudFetches[k];
+   var main=rows[0]&&rows[0].data?[rows[0].data]:[],qa=rows[1]&&rows[1].data?rows[1].data:[];
+   aiExpCloudMergeCard(k,main,qa);
+  }).catch(function(){delete aiExpCloudFetches[k];});
+ }catch(e){delete aiExpCloudFetches[k];}
+}
 function aiExpPut(k,text,route){
- try{
-  var c=aiExpAll(),old=c[k]||{},now=Date.now();
-  c[k]={x:text,t:now,u:now,m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null,
-   qa:Array.isArray(old.qa)?old.qa:[]};
-  var ks=Object.keys(c);
-  if(ks.length>300){ks.sort(function(a,b){return (c[a].u||c[a].t||0)-(c[b].u||c[b].t||0);});ks.slice(0,ks.length-300).forEach(function(d){delete c[d];});}
-  localStorage.setItem(AIEK,JSON.stringify(c));
-  aiExpCloudPush();
-  return true;
- }catch(e){console.warn('exp save:',e);return false;}
+ if(!k||!text)return false;
+ var old=aiExpGet(k)||{},now=Date.now(),r={x:String(text),t:now,u:now,
+  m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null,qa:Array.isArray(old.qa)?old.qa:[]};
+ var localOk=aiExpLocalPut(k,r),cloudOk=aiExpCloudMainQueue(k,r);return localOk||cloudOk;
 }
-function aiExpQaPut(k,q,text,route){
- try{
-  var c=aiExpAll(),r=c[k];
-  if(!r||!r.x||!text)return false;
-  var now=Date.now(),qa=Array.isArray(r.qa)?r.qa.slice():[];
-  qa.push({id:String(now)+'-'+Math.random().toString(36).slice(2,8),q:String(q),a:String(text),t:now,
-   m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null});
-  r.qa=qa;r.u=now;c[k]=r;
-  localStorage.setItem(AIEK,JSON.stringify(c));
-  aiExpCloudPush();
-  return true;
- }catch(e){console.warn('follow-up save:',e);return false;}
+function aiExpQaPut(k,q,text,route,mainText,onCloud){
+ if(!k||!text)return {ok:false,local:false,cloud:false};
+ var old=aiExpGet(k)||{},now=Date.now(),main=String(old.x||mainText||'');
+ var qa={id:String(now)+'-'+Math.random().toString(36).slice(2,8),q:String(q),a:String(text),t:now,
+  m:route&&route.model?route.model:AI_MODEL,e:route&&route.effort?route.effort:null};
+ var r={x:main,t:old.t||now,u:now,m:old.m||(route&&route.model)||AI_MODEL,e:old.e||(route&&route.effort)||null,
+  qa:Array.isArray(old.qa)?old.qa.slice():[]};
+ aiExpMergeQa(r,qa);var localOk=aiExpLocalPut(k,r);
+ if(main)aiExpCloudMainQueue(k,r);
+ var cloudOk=aiExpCloudQaQueue(k,qa,main,onCloud);
+ return {ok:localOk||cloudOk,local:localOk,cloud:cloudOk,id:qa.id};
 }
-/* 讲解云同步：独立行(SB_ID+'_exp')，生成后防抖4s整卷推送；启动拉取按时间戳新者合并。
-   网络不可达时静默降级为仅本机（与原站进度云同步同行为）。*/
-var aiExpPushT=null;
-function aiExpCloudPush(){
- if(!sb)return;
- if(aiExpPushT)clearTimeout(aiExpPushT);
- aiExpPushT=setTimeout(function(){
-  aiExpPushT=null;
-  try{
-   sb.from('progress').upsert({id:SB_ID+'_exp',payload:aiExpAll(),updated_at:new Date().toISOString()})
-    .then(function(r){if(r&&r.error)console.warn('exp push:',r.error.message);});
-  }catch(e){}
- },4000);
-}
+/* 旧版整包只读兼容；新写入全部走逐卡/逐条记录，避免一条失败或并发覆盖整包。 */
 function aiExpCloudPull(){
  if(!sb)return;
  try{
-  sb.from('progress').select('payload').eq('id',SB_ID+'_exp').maybeSingle().then(function(r){
-   try{
-    if(!(r&&r.data&&r.data.payload))return;
-    var cloud=r.data.payload;var loc=aiExpAll();var ch=false;
-    for(var k in cloud){var cv=cloud[k],lv=loc[k];
-     if(cv&&cv.x&&(!lv||(cv.u||cv.t||0)>(lv.u||lv.t||0))){loc[k]=cv;ch=true;}}
-    if(ch)localStorage.setItem(AIEK,JSON.stringify(loc));
-   }catch(e){}
+  sb.from('progress').select('payload').eq('id',SB_ID+'_exp').maybeSingle().then(function(res){
+   var cloud=res&&res.data&&res.data.payload;if(!cloud)return;
+   Object.keys(cloud).forEach(function(k){var cv=cloud[k],lv=aiExpGet(k);
+    if(cv&&cv.x&&(!lv||(cv.u||cv.t||0)>(lv.u||lv.t||0)))aiExpLocalPut(k,cv);});
   });
  }catch(e){}
 }
 aiExpCloudPull();
-/* 旧版在 Supabase 暂停期间生成的本机讲解，恢复联网后自动整卷补传。 */
-setTimeout(function(){if(Object.keys(aiExpAll()).length)aiExpCloudPush();},5200);
-window.addEventListener('online',function(){if(Object.keys(aiExpAll()).length)aiExpCloudPush();});
+window.addEventListener('online',function(){if(Object.keys(aiExpCloudQueue).length)aiExpCloudFlush();});
 
 /* ---- 卡片讲解后台任务：按 cardKey 隔离，可并行、可收起、可单独停止 ---- */
 var aiCardJobs=Object.create(null);var aiCardJobSeq=0;var AI_CARD_JOB_HISTORY=24;
@@ -1253,6 +1320,7 @@ function aiCardJobStart(x,route){
 function aiCardPanelAttach(panel,x){
  if(!panel||!x)return;
  var k=aiCardId(x);panel.setAttribute('data-ai-card-key',k);
+ aiExpCloudFetchCard(k);
  var sub=panel.querySelector('.ai-panel-sub');if(sub)sub.textContent='· '+x.q;
  var j=aiCardJobs[k],body=panel.querySelector('.ai-panel-body');
  if(j){aiCardJobPaint(j);if(body&&typeof j.scrollTop==='number')body.scrollTop=j.scrollTop;return;}
@@ -1316,10 +1384,15 @@ function aiAskGo(panel){
  var route=aiRoute('followup',false),cardKey=boundKey||aiCardId(x);
  aiStream(aiAskPrompt(x,q),blk.querySelector('.ai-ask-a'),function(text){
   if(!text)return;
-  var ok=aiExpQaPut(cardKey,q,text,route),tip=document.createElement('div');
-  tip.className='ai-ask-save '+(ok?'':'is-error');
-  tip.textContent=ok?'📌 追问已保存 · 正在同步云端':'⚠ 回答已生成，但保存失败';
-  blk.appendChild(tip);
+  var job=aiCardJobs[cardKey],saved=aiExpGet(cardKey),mainText=(saved&&saved.x)||(job&&job.text)||'';
+  var tip=document.createElement('div');tip.className='ai-ask-save';tip.textContent='📌 正在保存追问…';blk.appendChild(tip);
+  var result=aiExpQaPut(cardKey,q,text,route,mainText,function(ok){
+   if(ok){tip.className='ai-ask-save';tip.textContent='☁️ 追问已永久保存到云端';}
+   else{tip.className='ai-ask-save is-error';tip.textContent='⚠ 已保存在本机 · 云端暂未同步，将自动重试';}
+  });
+  if(!result.ok){tip.className='ai-ask-save is-error';tip.textContent='⚠ 回答已生成，但本机与云端均未能保存';}
+  else if(result.local)tip.textContent='📌 追问已保存到本机 · 正在同步云端';
+  else tip.textContent='📌 追问已暂存 · 正在写入云端';
  },route);
 }
 document.addEventListener('click',function(ev){
