@@ -1312,7 +1312,8 @@ function aiAskGo(panel){
  blk.innerHTML='<div class="ai-ask-q">❓ '+esc(q)+'</div><div class="ai-ask-a"></div>';
  body.appendChild(blk);
  inp.value='';
- var route=aiRoute('followup',false),cardKey=x.key||boundKey;
+ /* 主讲解按 aiCardId 保存；重复题目的唯一键包含 @hash，不能退回到 x.key。 */
+ var route=aiRoute('followup',false),cardKey=boundKey||aiCardId(x);
  aiStream(aiAskPrompt(x,q),blk.querySelector('.ai-ask-a'),function(text){
   if(!text)return;
   var ok=aiExpQaPut(cardKey,q,text,route),tip=document.createElement('div');
