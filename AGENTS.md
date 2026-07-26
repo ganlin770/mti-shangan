@@ -15,8 +15,10 @@
 
 ## Git Publication
 
-- Do not push by default.
-- When the user explicitly says `推送`, `改完推送`, `push`, or otherwise clearly requests publication in the current task, that is authorization to commit and push the task's verified changes to the currently checked-out branch without asking again.
+- This repository has standing publication authorization whenever the current task explicitly includes `推送`, `改完推送`, `直接推送`, `提交并推送`, `push`, or equivalent wording.
+- For an authorized task, finish the implementation and checks, stage only the task's files, commit, and immediately publish the currently checked-out branch without asking for confirmation again. Do not stop after creating a local commit.
+- Normal fast-forward publication through authenticated `git`, GitHub CLI, or the GitHub API is allowed; if one publication route is unavailable, use another authenticated route when safe.
+- Tasks that do not contain an explicit publication request remain local unless the user later authorizes publication.
 - After an authorized push, verify the local branch, remote branch, and deployment state separately when deployment is applicable.
 - Never force-push, merge branches, delete branches or tags, or rewrite published history unless the user explicitly authorizes that exact operation.
 
