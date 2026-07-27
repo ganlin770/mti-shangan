@@ -80,7 +80,7 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
   const result = await page.evaluate(async () => {
     const required = [
       'tdBuildDueQueue', 'tdBuildNewQueue', 'tdPsgEligible',
-      'tdWriteTaskFor', 'td211TaskFor', 'tdPoliticsReady', 'tdVocabUsable', 'tdNcuMsMeta', 'tdDrawDrill',
+      'tdWriteTaskFor', 'td211TaskFor', 'tdPoliticsLessons', 'tdPoliticsCurrentLesson', 'tdPoliticsLessonFor', 'tdPoliticsLessonHtml', 'tdPoliticsReady', 'tdVocabUsable', 'tdNcuMsMeta', 'tdDrawDrill',
       'tdNcuDrillYear', 'tdTransMinUnits', 'tdNextAction', 'tdWeekPlanHtml',
       'tdRoadmapHtml', 'tdRetestReady', 'tdDraftSave', 'tdSetSession', 'tdQualification', 'tdGtBuild', 'tdOnJudged',
       'tdListenAudioToggle', 'tdListenAudioStop', 'tdListenAudioView'
@@ -113,6 +113,11 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
 
     delete st.daily;
     tdGen();
+    const politicsLessons = tdPoliticsLessons();
+    const initialPoliticsLesson = tdPoliticsLessonFor(st.daily);
+    st.politicsLearning.completed[initialPoliticsLesson.id] = st.daily.date;
+    const nextPoliticsLesson = tdPoliticsCurrentLesson();
+    delete st.politicsLearning.completed[initialPoliticsLesson.id];
     cur = 'today';
     render();
     const initialNext = tdNextAction(st.daily);
@@ -203,6 +208,8 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
 
     TD_DONE_KEYS.forEach((key) => { st.daily.done[key] = 1; });
     const validPoliticsEvidence = {
+      lessonId: initialPoliticsLesson.id,
+      conceptChecked: 1,
       resource: '肖秀荣《精讲精练》与1000题',
       scope: '马克思主义基本原理第1至2章：物质观、实践观与认识论',
       answered: st.daily.politicsPlan.target,
@@ -214,6 +221,8 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
     const politicsMissingResource = tdPoliticsReady(st.daily);
     st.daily.politics = { ...validPoliticsEvidence, scope: '' };
     const politicsMissingScope = tdPoliticsReady(st.daily);
+    st.daily.politics = { ...validPoliticsEvidence, conceptChecked: 0 };
+    const politicsMissingConcept = tdPoliticsReady(st.daily);
     st.daily.politics = { ...validPoliticsEvidence };
     const politicsComplete = tdPoliticsReady(st.daily);
     st.daily.protocol = 1;
@@ -437,6 +446,13 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
     const politicsProof = !!document.querySelector('[data-testid="td-politics-proof"]');
     const politicsResource = document.querySelector('[data-testid="td-politics-resource"]');
     const politicsScope = document.querySelector('[data-testid="td-politics-scope"]');
+    const politicsLesson = document.querySelector('[data-testid="td-politics-lesson"]');
+    const politicsConcept = document.querySelector('[data-testid="td-politics-concept"]');
+    const politicsTree = document.querySelector('[data-testid="td-politics-tree"]');
+    const politicsPointCount = document.querySelectorAll('[data-testid="td-politics-points"] li').length;
+    const politicsTreeLessonCount = document.querySelectorAll('[data-testid="td-politics-tree-lesson"]').length;
+    if (politicsConcept) politicsConcept.dispatchEvent(new Event('change', { bubbles: true }));
+    const politicsCompletionSaved = !!(st.politicsLearning && st.politicsLearning.completed && st.politicsLearning.completed[st.daily.politics.lessonId]);
     const pageWidth = document.documentElement.scrollWidth;
     const viewportWidth = document.documentElement.clientWidth;
     const ids = [...document.querySelectorAll('[id]')].map((el) => el.id);
@@ -482,9 +498,14 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
       week211Grades: week211.map((x) => x.sourceGrade),
       week211WritingMins: week211.filter((x) => x.kind === 'writing').map((x) => x.minUnits),
       week448Mins: week448.map((x) => x.minUnits),
+      politicsLessonCount: politicsLessons.length,
+      politicsSubjectCount: TD_POLITICS_TREE.length,
+      initialPoliticsLesson,
+      nextPoliticsLesson,
       politicsBlank,
       politicsMissingResource,
       politicsMissingScope,
+      politicsMissingConcept,
       politicsComplete,
       beforeNight,
       beforeNightCounts,
@@ -518,6 +539,12 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
       politicsProof,
       politicsResource: politicsResource ? politicsResource.value : null,
       politicsScope: politicsScope ? politicsScope.value : null,
+      politicsLessonVisible: visible(politicsLesson),
+      politicsConceptChecked: politicsConcept ? politicsConcept.checked : false,
+      politicsTreeVisible: visible(politicsTree),
+      politicsPointCount,
+      politicsTreeLessonCount,
+      politicsCompletionSaved,
       duplicateIds,
       stageProgress,
       rushRoadmap,
@@ -569,9 +596,14 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
   [100, 150, 300, 400, 400, 800, 200].forEach((minimum, index) => {
     assert(result.week448Mins[index] >= minimum, `448 day ${index + 1} minUnits ${result.week448Mins[index]} is below ${minimum}`);
   });
+  assert.equal(result.politicsSubjectCount, 5, 'the political knowledge tree must contain all five subjects');
+  assert.equal(result.politicsLessonCount, 53, 'the political knowledge tree must contain all 53 course units');
+  assert.equal(result.initialPoliticsLesson.id, 'marx-01', 'a fresh learner must start from the first knowledge unit');
+  assert.notEqual(result.nextPoliticsLesson.id, result.initialPoliticsLesson.id, 'the next day must advance after a unit is completed');
   assert.equal(result.politicsBlank, false, 'blank political evidence must not pass');
   assert.equal(result.politicsMissingResource, false, '101 must require the textbook or question-bank name');
   assert.equal(result.politicsMissingScope, false, '101 must require the chapter or knowledge scope');
+  assert.equal(result.politicsMissingConcept, false, '101 must require an active closed-book knowledge-point check');
   assert.equal(result.politicsComplete, true, 'complete 101 evidence should pass');
   assert.equal(result.beforeNight.qualified, false, 'completion must not bypass the evening test');
   assert.match(result.beforeNightCounts.tasks, /9\s*\/\s*9/, `task count is not independently rendered: ${JSON.stringify(result.beforeNightCounts)}`);
@@ -611,10 +643,16 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
   assert.equal(result.politicsProof, true, '101 evidence form is missing');
   assert.equal(result.politicsResource, '肖秀荣《精讲精练》与1000题', '101 resource input did not persist into the rendered form');
   assert.equal(result.politicsScope, '马克思主义基本原理第1至2章：物质观、实践观与认识论', '101 scope input did not persist into the rendered form');
+  assert.equal(result.politicsLessonVisible, true, 'today political knowledge unit is not visible');
+  assert.equal(result.politicsConceptChecked, true, 'today political knowledge check did not persist');
+  assert.equal(result.politicsTreeVisible, true, 'the complete nested political knowledge tree is missing');
+  assert(result.politicsPointCount >= 3, 'today political unit lacks concrete knowledge points');
+  assert.equal(result.politicsTreeLessonCount, 53, 'the rendered nested tree is incomplete');
+  assert.equal(result.politicsCompletionSaved, true, 'finishing today political unit did not update the persistent progression');
   assert.deepEqual(result.duplicateIds, [], `duplicate ids in today view: ${result.duplicateIds.join(', ')}`);
   assert(result.stageProgress.length >= 4 && result.stageProgress.every((item) => item.role === 'progressbar' && item.label && item.now !== null && item.max !== null), `stage progress lacks accessible semantics: ${JSON.stringify(result.stageProgress)}`);
   assert.match(result.rushRoadmap, /435 分钟/);
-  assert.match(result.rushRoadmap, /教材理解25 \+ 选择题45 \+ 错因\/框架20/);
+  assert.match(result.rushRoadmap, /知识点学习25 \+ 选择题45 \+ 错因\/框架20/);
   assert.equal(result.noHorizontalOverflow, true, 'desktop today view overflows horizontally');
   assert.deepEqual(pageErrors, [], `page errors: ${pageErrors.join('; ')}`);
 
@@ -736,6 +774,8 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
     const listenRetell = document.querySelector('[data-testid="td-listen-retell"]');
     const listenToggle = document.querySelector('[data-testid="td-listen-toggle"]');
     const listenComplete = document.querySelector('.td-listen-complete');
+    const politicsLesson = document.querySelector('[data-testid="td-politics-lesson"]');
+    const politicsTree = document.querySelector('[data-testid="td-politics-tree"]');
     const cardRect = listenCard?.getBoundingClientRect();
     const controlsRect = listenControls?.getBoundingClientRect();
     const retellRect = listenRetell?.getBoundingClientRect();
@@ -748,6 +788,9 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
       planColumns: columns('.td-plan-grid'),
       proofColumns: columns('.td-proof'),
       gateColumns: columns('.td-qgates'),
+      politicsPointColumns: columns('.td-pol-points'),
+      politicsLessonInside: !!politicsLesson && politicsLesson.getBoundingClientRect().left >= -1 && politicsLesson.getBoundingClientRect().right <= innerWidth + 1,
+      politicsTreeInside: !!politicsTree && politicsTree.getBoundingClientRect().left >= -1 && politicsTree.getBoundingClientRect().right <= innerWidth + 1,
       total: document.querySelector('[data-testid="td-plan-total"]')?.textContent || '',
       mnav: {
         visible: isVisible(mnav),
@@ -772,6 +815,9 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
   assert.equal(mobileState.planColumns, 1, '390px roadmap must collapse to one column');
   assert.equal(mobileState.proofColumns, 1, '390px politics proof must collapse to one column');
   assert.equal(mobileState.gateColumns, 1, '390px qualification gates must collapse to one column');
+  assert.equal(mobileState.politicsPointColumns, 1, '390px political knowledge points must collapse to one column');
+  assert.equal(mobileState.politicsLessonInside, true, '390px political lesson escaped the viewport');
+  assert.equal(mobileState.politicsTreeInside, true, '390px political tree escaped the viewport');
   assert.equal(mobileState.mnav.visible, true, `390px mobile navigation is hidden: ${JSON.stringify(mobileState.mnav)}`);
   assert.notEqual(mobileState.mnav.display, 'none', '390px mobile navigation computed display is none');
   assert.equal(mobileState.mnav.insideViewport, true, `mobile navigation is outside the viewport: ${JSON.stringify(mobileState.mnav)}`);

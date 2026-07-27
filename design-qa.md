@@ -43,3 +43,34 @@ Date: 2026-07-23
 3. Post-fix check: the combined reference/implementation image shows matching reading hierarchy and visual language; breakpoint and interaction checks passed.
 
 Final result: passed
+
+---
+
+# Design QA — 今日政治知识点主线
+
+Date: 2026-07-27
+
+## Source and scope
+
+- Source structure: Chrome 中用户自有夸克目录 `00_只学这个_MTI政治主线` 的五科课程顺序与可见肖1000题范围。
+- Implementation surface: 「今日学习」101 政治任务卡。
+- Content boundary: 只嵌入章节、知识点和题号映射，不复制或嵌入网盘视频、讲义及答案正文。
+
+## Visual and interaction checks
+
+| Surface | Result |
+| --- | --- |
+| Information hierarchy | 今日科目、章节、4 个核心知识点、对应练习和复述确认依次呈现；训练证据表位于知识单元之后。 |
+| Nested outline | 完整 5 科 53 节知识树默认折叠；展开后当前科目与当前单元自动展开，并区分今日、待学习、已完成。 |
+| Existing design language | 沿用米白纸张、墨绿标题、细边框和现有圆角；未增加图片、图标包或生产依赖。 |
+| Desktop | Chrome 本地页面检查通过；知识点采用两列短卡，题号和表单不拥挤，无横向溢出。 |
+| Mobile | 390 × 844 自动验收通过；知识点折为单列，知识卡、知识树和表单均在视口内。 |
+
+## Behavior checks
+
+- 新用户从马原导论开始，主线总数为 53 节。
+- 只有知识点复述确认、达标题量与正确率、错因和闭卷框架全部通过，当前单元才进入完成进度。
+- 同一天单元保持固定；下一学习日选择第一个未完成单元。
+- 完成进度写入既有学习状态，因此随本机保存和 Supabase 整包同步一起持久化。
+
+Final result: passed

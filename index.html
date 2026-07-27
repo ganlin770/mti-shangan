@@ -393,6 +393,39 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .td-week-line b{color:var(--ink);font-size:10px}
 .td-week-line span{min-width:0}
 .td-week-legend{display:block;padding:0 14px 12px;color:var(--mut);font-size:10.5px;line-height:1.55}
+.td-pol-lesson{grid-column:1/-1;margin-top:2px;border:1px solid rgba(46,74,56,.18);border-left:4px solid var(--green);border-radius:13px;background:linear-gradient(145deg,rgba(46,74,56,.07),rgba(255,255,255,.72));padding:14px 15px;display:flex;flex-direction:column;gap:11px;min-width:0}
+.td-pol-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;min-width:0}
+.td-pol-kicker{display:block;color:var(--rust);font-size:10.5px;font-weight:800;letter-spacing:.08em;margin-bottom:3px}
+.td-pol-head h3{margin:0;color:var(--green2);font-family:"Noto Serif SC",serif;font-size:17px;line-height:1.45}
+.td-pol-count{flex:none;display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border:1px solid rgba(46,74,56,.18);border-radius:999px;background:rgba(255,255,255,.66);color:var(--green2);font-size:10.5px;font-weight:700;white-space:nowrap}
+.td-pol-points{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.td-pol-points li{position:relative;border:1px solid rgba(46,74,56,.12);border-radius:9px;background:rgba(255,255,255,.62);padding:8px 10px 8px 27px;color:var(--ink);font-size:11.5px;line-height:1.55;min-width:0}
+.td-pol-points li:before{content:"";position:absolute;left:11px;top:13px;width:7px;height:7px;border-radius:50%;background:var(--green)}
+.td-pol-practice{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:10px 11px;border-top:1px dashed rgba(46,74,56,.2);border-bottom:1px dashed rgba(46,74,56,.2);font-size:11px;line-height:1.6}
+.td-pol-practice b{color:var(--green2)}
+.td-pol-practice span{color:var(--mut);overflow-wrap:anywhere}
+.td-pol-check{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:8px!important;color:var(--ink)!important;font-size:11.5px!important;line-height:1.55;cursor:pointer}
+.td-pol-check input{width:auto!important;margin:2px 0 0;accent-color:var(--green);flex:none}
+.td-pol-tree{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.52);overflow:hidden}
+.td-pol-tree>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;color:var(--green2);font-size:11.5px;font-weight:700;cursor:pointer}
+.td-pol-tree>summary::-webkit-details-marker{display:none}
+.td-pol-tree>summary small{color:var(--mut);font-size:10px;font-weight:500}
+.td-pol-tree>summary:after{content:"展开";color:var(--rust);font-size:10px;font-weight:500;flex:none}
+.td-pol-tree[open]>summary:after{content:"收起"}
+.td-pol-tree-body{border-top:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:8px}
+.td-pol-subject{border:1px solid var(--line);border-radius:9px;background:var(--card);overflow:hidden}
+.td-pol-subject>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;cursor:pointer;color:var(--green2);font-size:11.5px;font-weight:700}
+.td-pol-subject>summary::-webkit-details-marker{display:none}
+.td-pol-subject>summary span{color:var(--mut);font-size:10px;font-weight:500}
+.td-pol-lessons{list-style:none;margin:0;padding:0 10px 9px;display:flex;flex-direction:column;gap:5px}
+.td-pol-item{border-top:1px solid rgba(46,74,56,.1);padding-top:6px}
+.td-pol-item>summary{list-style:none;display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:start;gap:6px;color:var(--ink);font-size:10.8px;line-height:1.5;cursor:pointer}
+.td-pol-item>summary::-webkit-details-marker{display:none}
+.td-pol-item>summary i{font-style:normal;color:var(--mut);text-align:right}
+.td-pol-item.today>summary{color:var(--green2);font-weight:800}
+.td-pol-item.done>summary i{color:var(--green)}
+.td-pol-item ul{margin:6px 0 2px 24px;padding-left:14px;color:var(--mut);font-size:10.5px;line-height:1.6}
+.td-pol-item p{margin:5px 0 2px 24px;color:var(--rust);font-size:10px;line-height:1.55}
 .td-proof{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
 .td-proof label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--mut)}
 .td-proof input,.td-proof textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:12px;color:var(--ink)}
@@ -409,6 +442,7 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 @media(max-width:760px){.td-qgates{grid-template-columns:1fr}.td-qhead{flex-direction:column}.td-qresult{align-self:flex-start}}
 @media(max-width:760px){.td-sumbox .ai-send{min-height:44px}}
 @media(max-width:920px){.td-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.td-plan-cell:last-child{grid-column:1/-1}}
+@media(max-width:620px){.td-pol-head{flex-direction:column;gap:7px}.td-pol-count{align-self:flex-start}.td-pol-points{grid-template-columns:1fr}.td-pol-practice{grid-template-columns:1fr;gap:1px}.td-pol-tree>summary small{display:none}}
 @media(max-width:520px){.td-head{grid-template-columns:auto 1fr;padding:14px}.td-ring,.td-ring svg{width:54px;height:54px}.td-next{grid-template-columns:1fr}.td-next-btn{grid-column:1;grid-row:auto;width:100%;min-height:44px}.td-plan-head{flex-direction:column}.td-plan-grid{grid-template-columns:1fr}.td-plan-cell:last-child{grid-column:auto}.td-proof{grid-template-columns:1fr}.td-proof textarea{grid-column:auto}}
 
 @media(max-width:760px){.ai-setup-grid{grid-template-columns:1fr 1fr}.ai-wrap{max-width:none}}
@@ -2244,6 +2278,72 @@ function tdBJDate(){var t=tdBJ();return t.getUTCFullYear()+'-'+(t.getUTCMonth()+
 function tdBJDow(){return tdBJ().getUTCDay();}
 var TD_SCHEMA=6;var TD_REVIEW_CAP=30;
 var TD_DONE_KEYS=['politics','rev','neu','vocab','read','trans','write','drill','listen'];
+/* 政治知识树按用户夸克主线目录整理。这里只保存课程结构、知识点与题号映射，不复制网盘视频或讲义。 */
+var TD_POLITICS_TREE=[
+ {id:'marx',name:'马克思主义基本原理',short:'马原',lessons:[
+  ['marx-01','导论','肖1000：导论 单选1—7、多选1—2',['马克思主义的内涵与基本组成','马克思主义产生的社会根源、阶级基础和思想渊源','马克思主义的鲜明特征','马克思主义的当代价值']],
+  ['marx-02','哲学及其基本问题','肖1000：第一章 单选8—19',['哲学、世界观与方法论的关系','哲学基本问题的两个方面','唯物主义与唯心主义的根本分歧','可知论与不可知论']],
+  ['marx-03','物质观','肖1000：第一章 单选20—31',['物质范畴及其客观实在性','物质与运动、静止的关系','时间和空间的客观性','实践是自然存在与社会存在区分和统一的基础']],
+  ['marx-04','意识观与世界的物质统一性','肖1000：第一章 单选32—42',['意识的起源、本质和能动作用','主观能动性与客观规律性的统一','人工智能与人类意识的区别','世界的物质统一性原理']],
+  ['marx-05','联系和发展的两大总特征','肖1000：第一章 多选3—18',['联系的客观性、普遍性、多样性和条件性','发展的实质与新旧事物','过程观点和系统思维','对立统一规律是唯物辩证法的实质和核心']],
+  ['marx-06','对立统一规律','肖1000：第一章 多选19—34',['矛盾的同一性与斗争性','矛盾的普遍性与特殊性','主要矛盾和次要矛盾','矛盾主要方面和次要方面']],
+  ['marx-07','量变质变规律与否定之否定规律','肖1000：第一章 多选35—50',['质、量、度及适度原则','量变与质变的辩证关系','辩证否定观及其实质','事物发展的前进性与曲折性']],
+  ['marx-08','五对基本范畴','肖1000：第一章综合，错题回看讲解#2—#7',['原因与结果','必然与偶然','可能与现实','现象与本质','内容与形式']],
+  ['marx-09','实践','肖1000：第二章 单选43—55',['实践的本质、基本特征和基本形式','实践的主体、客体与中介','实践对认识的决定作用','认识活动中的主体与客体关系']],
+  ['marx-10','认识','肖1000：第二章 单选56—68',['感性认识与理性认识','从实践到认识、从认识到实践的两次飞跃','认识过程的反复性和无限性','理性因素与非理性因素']],
+  ['marx-11','真理、价值与认识世界和改造世界','肖1000：第二章 多选51—83',['真理的客观性、绝对性和相对性','实践是检验真理的唯一标准','价值及其基本特性','真理尺度与价值尺度的统一']],
+  ['marx-12','历史观基本问题与社会基本矛盾','肖1000：第三章 单选69—82',['社会存在与社会意识','生产力与生产关系','经济基础与上层建筑','社会基本矛盾是社会发展的根本动力']],
+  ['marx-13','社会形态更替与人民群众','肖1000：第三章 单选83—94、多选84—113',['社会形态更替的统一性与多样性','社会历史发展的动力系统','人民群众是历史的创造者','个人在社会历史中的作用']],
+  ['marx-14','简单商品经济（上）','肖1000：第四章 单选95—108',['商品的二因素','劳动的二重性','商品价值量及其决定','简单劳动与复杂劳动']],
+  ['marx-15','简单商品经济（下）','肖1000：第四章 单选109—123；网盘文件名疑有题号笔误，以试题册为准',['价值形式的发展与货币产生','货币的本质和职能','价值规律及其作用','商品拜物教的形成']],
+  ['marx-16','发达商品经济（上）','肖1000：第四章 单选124—138',['劳动力成为商品','剩余价值的生产过程','绝对剩余价值与相对剩余价值','资本的本质与构成']],
+  ['marx-17','发达商品经济（中）','肖1000：第四章 单选139—150',['资本积累及其后果','资本循环与周转','社会资本再生产','工资的本质和形式']],
+  ['marx-18','发达商品经济（下）','肖1000：第四章 单选151—163',['利润与平均利润','商业资本和商业利润','借贷资本、利息与地租','剩余价值的分配形式']],
+  ['marx-19','垄断及当代资本主义','肖1000：第四章综合题，以试题分册为准',['私人垄断与国家垄断资本主义','金融资本与金融寡头','经济全球化及其影响','当代资本主义新变化的表现与实质']]
+ ]},
+ {id:'morals',name:'思想道德与法治',short:'思修',lessons:[
+  ['morals-01','绪论与人生观','肖1000：思修绪论、人生观对应章，完成当日目标题量',['新时代青年的历史使命','人生观的主要内容','正确评价人生价值','创造有意义的人生']],
+  ['morals-02','理想信念','肖1000：理想信念对应章',['理想与现实的关系','信念、信仰与理想','中国特色社会主义共同理想','在实践中化理想为现实']],
+  ['morals-03','中国精神','肖1000：中国精神对应章',['以爱国主义为核心的民族精神','以改革创新为核心的时代精神','爱国主义的基本内涵和时代要求','做忠诚爱国者']],
+  ['morals-04','社会主义核心价值观','肖1000：社会主义核心价值观对应章',['核心价值观的基本内容','社会主义核心价值观的显著特征','价值观自信的依据','把核心价值观落细落小落实']],
+  ['morals-05','道德','肖1000：道德对应章',['道德的本质、功能和作用','中华传统美德与中国革命道德','社会主义道德的核心和原则','社会公德、职业道德、家庭美德和个人品德']],
+  ['morals-06','社会主义法律的特征、运行与全面依法治国','肖1000：法治观对应章',['法律的含义和社会主义法律特征','法律制定、执行、适用与遵守','习近平法治思想的核心要义','全面依法治国的基本格局']],
+  ['morals-07','宪法权威与尊法学法守法用法','肖1000：宪法与法治素养对应章',['宪法的地位与基本原则','中国特色社会主义法治道路','法治思维及其基本内容','依法行使权利与履行义务']]
+ ]},
+ {id:'history',name:'中国近现代史纲要',short:'史纲',lessons:[
+  ['history-01','进入近代后中华民族的磨难与抗争','肖1000：史纲第一章 单选及多选；有对应错题讲解',['资本—帝国主义对中国的侵略','近代中国社会性质和主要矛盾','反抗外来侵略的斗争','民族意识的觉醒']],
+  ['history-02','不同社会力量对国家出路的早期探索','肖1000：史纲第二章 单选及多选；有对应错题讲解',['太平天国农民战争','洋务运动','戊戌维新运动','早期探索失败的原因和教训']],
+  ['history-03','辛亥革命','肖1000：史纲辛亥革命对应章',['革命派的活动与三民主义','武昌起义与中华民国建立','辛亥革命的历史意义','辛亥革命失败的原因和教训']],
+  ['history-04','新文化运动、五四运动和中国共产党诞生','肖1000：史纲五四与建党对应章',['新文化运动及其影响','十月革命与马克思主义传播','五四运动的历史特点和意义','中国共产党成立及其伟大意义']],
+  ['history-05','中国革命的新局面','肖1000：史纲国民革命对应章',['第一次国共合作','国民革命的兴起与发展','北伐战争','大革命失败及其经验教训']],
+  ['history-06','中国革命的新道路','肖1000：史纲土地革命对应章',['武装反抗国民党反动统治','农村包围城市、武装夺取政权','土地革命与根据地建设','遵义会议与长征胜利']],
+  ['history-07','抗日战争','肖1000：史纲抗日战争对应章',['日本侵华与民族危机','抗日民族统一战线','正面战场与敌后战场','抗战胜利的原因和意义']],
+  ['history-08','解放战争与建立新中国','肖1000：史纲解放战争对应章',['争取和平民主的斗争','人民解放战争的战略进程','土地改革与第二条战线','新民主主义革命胜利的原因和意义']],
+  ['history-09','新中国时期','肖1000：史纲新中国成立后对应章',['社会主义基本制度确立','社会主义建设的探索','改革开放与中国特色社会主义开创','新时代的历史性成就和变革']]
+ ]},
+ {id:'mao',name:'毛泽东思想和中国特色社会主义理论体系概论',short:'毛中特',lessons:[
+  ['mao-01','导论、毛泽东思想及其历史地位','肖1000：毛中特导论与毛泽东思想对应章',['马克思主义中国化时代化','毛泽东思想形成发展的条件和过程','毛泽东思想的主要内容和活的灵魂','毛泽东思想的历史地位']],
+  ['mao-02','新民主主义革命理论（上）','肖1000：新民主主义革命理论对应章前半',['新民主主义革命理论形成的依据','近代中国国情与革命时代特征','革命总路线和基本纲领','革命对象、动力、领导力量和性质']],
+  ['mao-03','新民主主义革命理论（下）','肖1000：新民主主义革命理论对应章后半',['农村包围城市的革命道路','统一战线、武装斗争和党的建设','革命道路的内容和依据','新民主主义革命理论的意义']],
+  ['mao-04','社会主义改造理论','肖1000：社会主义改造理论对应章',['新民主主义社会的过渡性质','党在过渡时期的总路线','农业、手工业和资本主义工商业改造','社会主义基本制度确立的意义']],
+  ['mao-05','社会主义建设道路初步探索的理论成果','肖1000：初步探索对应章',['正确处理人民内部矛盾','社会主义建设的重要理论成果','初步探索的意义','初步探索的经验教训']],
+  ['mao-06','中国特色社会主义理论体系','肖1000：中国特色社会主义理论体系对应章',['中国特色社会主义理论体系的形成发展','邓小平理论','三个代表重要思想','科学发展观']]
+ ]},
+ {id:'new-era',name:'习近平新时代中国特色社会主义思想概论',short:'新思想',lessons:[
+  ['new-01','导论与新时代坚持和发展中国特色社会主义','肖1000：新思想导论对应章',['新时代的历史方位','新时代社会主要矛盾','新时代坚持和发展中国特色社会主义的总任务','习近平新时代中国特色社会主义思想的世界观和方法论']],
+  ['new-02','以中国式现代化全面推进中华民族伟大复兴','肖1000：中国式现代化对应章',['中华民族伟大复兴的中国梦','中国式现代化的中国特色','中国式现代化的本质要求','推进中国式现代化必须把握的重大原则']],
+  ['new-03','坚持党的全面领导与以人民为中心','肖1000：党的领导、人民立场对应章',['中国共产党领导是中国特色社会主义最本质特征','党的领导制度体系','人民立场和人民主体地位','共同富裕与人的全面发展']],
+  ['new-04','全面深化改革开放','肖1000：全面深化改革对应章',['全面深化改革的总目标','推进国家治理体系和治理能力现代化','改革的方法论','坚持和扩大高水平对外开放']],
+  ['new-05','推动高质量发展（上）','肖1000：高质量发展对应章前半',['新发展阶段、新发展理念和新发展格局','高质量发展是首要任务','社会主义基本经济制度','使市场在资源配置中起决定性作用、更好发挥政府作用']],
+  ['new-06','推动高质量发展（下）','肖1000：高质量发展对应章后半',['建设现代化经济体系','发展新质生产力','乡村全面振兴','区域协调发展与高水平开放']],
+  ['new-07','教育、科技、人才战略','肖1000：教育科技人才对应章',['教育、科技、人才的基础性战略性支撑作用','教育优先发展','科技自立自强','人才引领驱动']],
+  ['new-08','发展全过程人民民主','肖1000：全过程人民民主对应章',['全过程人民民主的本质属性','人民当家作主制度体系','社会主义协商民主','巩固和发展新时代爱国统一战线']],
+  ['new-09','全面依法治国','肖1000：全面依法治国对应章',['全面依法治国的总目标','中国特色社会主义法治道路','法治国家、法治政府、法治社会一体建设','科学立法、严格执法、公正司法、全民守法']],
+  ['new-10','建设社会主义文化强国','肖1000：文化建设对应章',['意识形态工作领导权','社会主义核心价值观','中华优秀传统文化创造性转化和创新性发展','建设文化强国与提升国家文化软实力']],
+  ['new-11','民生、社会建设与生态文明','肖1000：民生社会生态对应章',['在发展中保障和改善民生','加强和创新社会治理','总体国家安全观中的社会安全','绿水青山就是金山银山与美丽中国建设']],
+  ['new-12','强国建设的内外条件','肖1000：国家安全、国防、统一与外交对应章',['总体国家安全观','国防和军队现代化','一国两制与祖国完全统一','中国特色大国外交与人类命运共同体']]
+ ]}
+];
 var TD_LISTEN=[
  {id:'weekly-errors',minutes:10,label:'本周错词英文复述 10 分钟：不用看答案，说出含义与一个例句'},
  {id:'gov-report',minutes:15,label:'政府工作报告双语跟读 15 分钟：逐段跟读后脱稿复述'},
@@ -2361,7 +2461,13 @@ function td211TaskFor(date){var z=tdDateInfo(date),week=Math.floor(z.monday/7),t
  else task={taskId:'211-weekly-'+week,kind:'weekly',label:'211 周复盘与摘要重写',minutes:40,max:15,pass:12,minUnits:100,question:'选择本周最难的一篇英语材料：先写150词英文摘要，再列出5个本周反复出错的语法或搭配，并分别给出正确例句。'};
  task.source=task.source||'英语专业高年级通用能力训练';task.sourceGrade=task.sourceGrade||'D';return task;}
 function tdPoliticsPlan(){var d=aiDays();if(d>90)return{phase:'基础强化',minutes:75,target:25,passRate:.7,label:'理解1个知识单元 + 25道选择题 + 错因复盘 + 闭卷框架'};if(d>45)return{phase:'真题强化',minutes:75,target:35,passRate:.75,label:'35道混合选择题 + 错题归类 + 主观题框架'};return{phase:'冲刺整合',minutes:90,target:40,passRate:.8,label:'40道混合题 + 错题回炉 + 主观题闭卷提纲'};}
-function tdPoliticsReady(D){var P=D.politics||{},plan=D.politicsPlan||tdPoliticsPlan(),hasCorrect=P.correct!==''&&P.correct!==null&&P.correct!==undefined,material=String(P.resource||'').trim().length>=2&&String(P.scope||'').trim().length>=2;return material&&+P.answered>=plan.target&&hasCorrect&&+P.correct>=0&&+P.correct<=+P.answered&&+P.correct/Math.max(1,+P.answered)>=plan.passRate&&String(P.wrongNote||'').replace(/\s/g,'').length>=30&&String(P.framework||'').replace(/\s/g,'').length>=30;}
+function tdPoliticsLessons(){var out=[];TD_POLITICS_TREE.forEach(function(subject){subject.lessons.forEach(function(row,subjectIndex){out.push({id:row[0],title:row[1],questions:row[2],points:row[3],subjectId:subject.id,subjectName:subject.name,subjectShort:subject.short,subjectIndex:subjectIndex+1});});});out.forEach(function(x,i){x.index=i+1;x.total=out.length;});return out;}
+function tdPoliticsState(){st.politicsLearning=st.politicsLearning&&typeof st.politicsLearning==='object'?st.politicsLearning:{completed:{}};st.politicsLearning.completed=st.politicsLearning.completed&&typeof st.politicsLearning.completed==='object'?st.politicsLearning.completed:{};return st.politicsLearning;}
+function tdPoliticsLessonById(id){var lessons=tdPoliticsLessons();for(var i=0;i<lessons.length;i++)if(lessons[i].id===id)return lessons[i];return null;}
+function tdPoliticsCurrentLesson(){var lessons=tdPoliticsLessons(),done=tdPoliticsState().completed;for(var i=0;i<lessons.length;i++)if(!done[lessons[i].id])return lessons[i];return lessons.length?lessons[tdDayNum()%lessons.length]:null;}
+function tdPoliticsLessonFor(D){var P=D&&D.politics||{},lesson=tdPoliticsLessonById(P.lessonId);return lesson||tdPoliticsCurrentLesson();}
+function tdPoliticsProgress(){var lessons=tdPoliticsLessons(),done=tdPoliticsState().completed;return{done:lessons.filter(function(x){return !!done[x.id];}).length,total:lessons.length};}
+function tdPoliticsReady(D){var P=D.politics||{},plan=D.politicsPlan||tdPoliticsPlan(),hasCorrect=P.correct!==''&&P.correct!==null&&P.correct!==undefined,material=String(P.resource||'').trim().length>=2&&String(P.scope||'').trim().length>=2;return !!P.lessonId&&!!P.conceptChecked&&material&&+P.answered>=plan.target&&hasCorrect&&+P.correct>=0&&+P.correct<=+P.answered&&+P.correct/Math.max(1,+P.answered)>=plan.passRate&&String(P.wrongNote||'').replace(/\s/g,'').length>=30&&String(P.framework||'').replace(/\s/g,'').length>=30;}
 function tdRevisionOk(s,min){return String(s||'').replace(/\s/g,'').length>=(min||80);}
 function tdRetestReady(D){var R=D.retest||{};return ['politics','english','translation','writing'].every(function(k){return tdRevisionOk(R[k],15);});}
 function tdScoreOf(text,max){var re=new RegExp('(\\d{1,3})\\s*\\/\\s*'+max+'(?:\\D|$)'),m=String(text||'').match(re);if(m){var n=+m[1];return n>=0&&n<=max?n:null;}if(max===100){m=String(text||'').match(/(\d{1,3})\s*%/);if(m&&+m[1]<=100)return +m[1];}return null;}
@@ -2376,18 +2482,18 @@ function tdQualification(D){var Q=tdQualityInit(D),politics=tdPoliticsReady(D),p
  var vocab=Q.vocab.total>=10&&Q.vocab.firstCorrect/Q.vocab.total>=.8;var drill=Q.drill.total>=D.drillGoal&&Q.drill.firstCorrect/Q.drill.total>=.8;
  var read=Q.read.score!=null&&Q.read.score>=D.e211.pass&&Q.read.outputUnits>=D.e211.minUnits;var trans=Q.trans.score!=null&&Q.trans.score>=70&&Q.trans.corrected;var write=Q.write.score!=null&&Q.write.score>=D.wTask.pass&&Q.write.corrected;
  var results=!!(politics&&vocab&&drill&&read&&trans&&write);var retention=!!(D.gt&&D.gt.done&&D.gt.passed&&tdRetestReady(D));var gates={source:source,process:process,results:results,retention:retention},gatesDoneN=Object.keys(gates).filter(function(k){return gates[k];}).length,blockers=[];
- if(!completion)blockers.push('任务未全部完成');if(!politicsMaterial)blockers.push('101教材/题库与章节范围未记录');if(!source)blockers.push('训练材料或题干不可用');if(!politics)blockers.push('101题量、正确率、错因或闭卷框架未达标');if(!process)blockers.push('闭卷计时/有效输出/听说复述未确认');if(!vocab)blockers.push('211词汇首测未达80%');if(!read)blockers.push('211主任务未达'+D.e211.pass+'/'+D.e211.max+'或输出不足');if(!drill)blockers.push('448名解首测未达80%');if(!trans)blockers.push('357未达70%或缺少结构化订正单');if(!write)blockers.push('写作未达当日线或缺少修订记录');if(!retention)blockers.push('晚间复测未达80%或缺少四科明日复测清单');
+ if(!completion)blockers.push('任务未全部完成');if(!politicsMaterial)blockers.push('101知识单元或对应题号未记录');if(!source)blockers.push('训练材料或题干不可用');if(!politics)blockers.push('101知识点复述、题量、正确率、错因或闭卷框架未达标');if(!process)blockers.push('闭卷计时/有效输出/听说复述未确认');if(!vocab)blockers.push('211词汇首测未达80%');if(!read)blockers.push('211主任务未达'+D.e211.pass+'/'+D.e211.max+'或输出不足');if(!drill)blockers.push('448名解首测未达80%');if(!trans)blockers.push('357未达70%或缺少结构化订正单');if(!write)blockers.push('写作未达当日线或缺少修订记录');if(!retention)blockers.push('晚间复测未达80%或缺少四科明日复测清单');
  return{qualified:completion&&source&&process&&results&&retention,completion:completion,doneN:doneN,total:TD_DONE_KEYS.length,doneMap:doneMap,subjectMap:subjectMap,subjectsDoneN:subjectsDoneN,gates:gates,gatesDoneN:gatesDoneN,transMinUnits:transMin,answerTrusted:/^[AB]$/.test(Q.trans.sourceGrade)&&/^[AB]$/.test(Q.write.sourceGrade)&&/^[AB]$/.test(D.e211.sourceGrade),mastered:!!D.nextDayPassed,blockers:blockers};}
 function tdGen(){
  var day=tdDayNum();var dow=tdBJDow();
- var vList=tdVocabFor(day),wTask=tdWriteTaskFor(tdBJDate()),e211=td211TaskFor(tdBJDate()),politicsPlan=tdPoliticsPlan();
+ var vList=tdVocabFor(day),wTask=tdWriteTaskFor(tdBJDate()),e211=td211TaskFor(tdBJDate()),politicsPlan=tdPoliticsPlan(),politicsLesson=tdPoliticsCurrentLesson();
  var newPool=POOL.filter(function(x){return x.type==='词条'&&!st.srs[x.key];}).length;
  var over0=typeStats('词条').over+typeStats('名解').over;
  var psgTask=tdPsgTaskFor(tdBJDate()),psg=psgTask.index,pm=psg>=0?tdPsgMeta(PSG[psg]):{eligible:false,grade:'D'};
  var readPsg=tdSelectPsg(day+17,'英译汉');
  st.daily={schema:TD_SCHEMA,date:tdBJDate(),vList:vList,vQueue:vList.slice(),vDone:0,psg:psg,readPsg:readPsg,e211:e211,
   wTask:wTask,wType:wTask.type,wTheme:-1,wReq:wTask.question,wLabel:wTask.label,
-  politicsPlan:politicsPlan,politics:{resource:'',scope:'',answered:0,correct:'',wrongNote:'',framework:''},transRevision:'',writeRevision:'',retest:{politics:'',english:'',translation:'',writing:''},listenChecked:0,
+  politicsPlan:politicsPlan,politics:{lessonId:politicsLesson?politicsLesson.id:'',conceptChecked:0,resource:'徐涛强化主课 + 27版肖1000题',scope:politicsLesson?politicsLesson.questions:'',answered:0,correct:'',wrongNote:'',framework:''},transRevision:'',writeRevision:'',retest:{politics:'',english:'',translation:'',writing:''},listenChecked:0,
   newGoal:Math.min(10,newPool),newCnt:0,revGoal:Math.min(TD_REVIEW_CAP,over0),drillGoal:6,drillCnt:0,drillSeen:{},
   done:{politics:0,rev:over0===0?1:0,neu:newPool===0?1:0,vocab:0,read:0,trans:0,write:0,drill:0,listen:0},protocol:0,listenNote:'',note:'',sum:'',qzMap:{}};
  tdQualityInit(st.daily);st.daily.quality.trans.sourceEligible=!!pm.eligible;st.daily.quality.trans.sourceGrade=pm.grade;st.daily.quality.write.promptValid=!!wTask.promptValid;st.daily.quality.write.sourceGrade=wTask.sourceGrade;
@@ -2402,7 +2508,7 @@ function tdEnsure(){
    if(ks.length>30){ks.sort();ks.slice(0,ks.length-30).forEach(function(k){delete st.dailyHist[k];});}
   }
   tdGen();save();
- }else{st.daily.politics=st.daily.politics||{};if(st.daily.politics.resource==null)st.daily.politics.resource='';if(st.daily.politics.scope==null)st.daily.politics.scope='';if(st.daily.wTask&&st.daily.wTask.minUnits==null)st.daily.wTask.minUnits=tdWriteTaskFor(st.daily.date).minUnits;tdQualityInit(st.daily);}
+ }else{tdPoliticsState();st.daily.politics=st.daily.politics||{};var hadLesson=!!st.daily.politics.lessonId,pl=tdPoliticsLessonFor(st.daily);if(!hadLesson&&pl){st.daily.politics.lessonId=pl.id;st.daily.politics.scope=pl.questions;}if(st.daily.politics.conceptChecked==null)st.daily.politics.conceptChecked=0;if(st.daily.politics.resource==null||!String(st.daily.politics.resource).trim())st.daily.politics.resource='徐涛强化主课 + 27版肖1000题';if(st.daily.politics.scope==null||!String(st.daily.politics.scope).trim())st.daily.politics.scope=pl?pl.questions:'';if(st.daily.wTask&&st.daily.wTask.minUnits==null)st.daily.wTask.minUnits=tdWriteTaskFor(st.daily.date).minUnits;tdQualityInit(st.daily);}
 }
 function tdCheckLatches(){
  var D=st.daily;if(!D)return;var ch=false;
@@ -2570,16 +2676,17 @@ function tdListenAudioStop(note){var oldId=tdListenAudio.id;tdListenAudio.seq++;
 function tdListenAudioVoice(S){var vs=[];try{vs=S.getVoices()||[];}catch(e){}var pick=null,i;for(i=0;i<vs.length;i++){if(/^en/i.test(vs[i].lang)&&SPK_PREF.test(vs[i].name)){pick=vs[i];break;}}if(!pick)for(i=0;i<vs.length;i++){if(/^en[-_]US/i.test(vs[i].lang)&&!SPK_BAD.test(vs[i].name)){pick=vs[i];break;}}return pick;}
 function tdListenAudioStart(L){tdListenAudioStop('');try{if(aiAudioEl){++aiSpkSeq;aiAudioEl.pause();aiAudioEl.removeAttribute('src');try{aiAudioEl.load();}catch(e){}}}catch(e){}if(!L||!L.text||!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance!=='function'){tdListenAudio.id=L?L.id:'';tdListenAudioSet('error');return;}var S=window.speechSynthesis,seq=++tdListenAudio.seq,u=new SpeechSynthesisUtterance(L.text),voice=tdListenAudioVoice(S);tdListenAudio.id=L.id;tdListenAudio.utterance=u;tdListenAudio.note='';u.lang='en-US';u.rate=.9;if(voice)u.voice=voice;u.onstart=function(){if(seq===tdListenAudio.seq)tdListenAudioSet('playing');};u.onend=function(){if(seq!==tdListenAudio.seq)return;tdListenAudio.utterance=null;tdListenAudioSet('idle','ended');};u.onerror=function(e){if(seq!==tdListenAudio.seq||e&&e.error==='canceled')return;tdListenAudio.utterance=null;tdListenAudioSet('error');};try{S.cancel();S.speak(u);tdListenAudioSet('playing');}catch(e){tdListenAudioSet('error');}}
 function tdListenAudioToggle(L){var U=tdListenAudioView(L),S=window.speechSynthesis;if(tdListenAudio.id===L.id&&U.state==='playing'){try{S.pause();tdListenAudioSet('paused');}catch(e){tdListenAudioSet('error');}return;}if(tdListenAudio.id===L.id&&U.state==='paused'){try{S.resume();tdListenAudioSet('playing');}catch(e){tdListenAudioSet('error');}return;}tdListenAudioStart(L);}
-function tdRoadmapHtml(D){var P=D.politicsPlan||tdPoliticsPlan(),total=P.minutes+75+120+105+45,polParts=P.minutes>75?'教材理解25 + 选择题45 + 错因/框架20':'教材理解20 + 选择题40 + 错因/框架15';var pm=tdPsgMeta(PSG[D.psg]);return '<section class="td-roadmap" data-testid="td-daily-roadmap"><div class="td-plan-head"><div><b>今日完整日课 · '+esc(P.phase)+'</b><small>先按时间保护四科输出，再处理积压；课程观看不计入下列净训练时间</small></div><span class="td-plan-total" data-testid="td-plan-total">'+total+' 分钟</span></div><div class="td-plan-grid">'
+function tdRoadmapHtml(D){var P=D.politicsPlan||tdPoliticsPlan(),total=P.minutes+75+120+105+45,polParts=P.minutes>75?'知识点学习25 + 选择题45 + 错因/框架20':'知识点学习20 + 选择题40 + 错因/框架15';var pm=tdPsgMeta(PSG[D.psg]);return '<section class="td-roadmap" data-testid="td-daily-roadmap"><div class="td-plan-head"><div><b>今日完整日课 · '+esc(P.phase)+'</b><small>每天自动接续一个政治知识单元；课程视频只作辅助，不替代知识点复述与做题</small></div><span class="td-plan-total" data-testid="td-plan-total">'+total+' 分钟</span></div><div class="td-plan-grid">'
  +'<div class="td-plan-cell"><b>101 政治 <em>'+P.minutes+'分</em></b><small>'+polParts+'<br>交付：题源范围、题量、正确数、错因、闭卷框架</small></div>'
  +'<div class="td-plan-cell"><b>211 英语 <em>75分</em></b><small>词汇20 + '+esc(D.e211.label)+'40 + 听说复述15<br>交付：首测记录、可评分英文作答、复述要点</small></div>'
  +'<div class="td-plan-cell"><b>357 翻译 <em>120分</em></b><small>完整初译60 + 逐句修订30 + 表达/错句15 + 新词条15<br>'+esc((PSG[D.psg]&&PSG[D.psg].d)||'双向翻译')+' · '+esc(pm.label)+'</small></div>'
  +'<div class="td-plan-cell"><b>448 百科写作 <em>105分</em></b><small>名解30分 + 当日写作'+D.wTask.minutes+'分 + 配套训练'+D.wTask.supportMinutes+'分<br>交付：6个名解、写作输出与修改痕迹</small></div>'
  +'<div class="td-plan-cell"><b>错题与复测 <em>45分</em></b><small>到期卡复习 + 晚间错题重测 + 四科明日无提示复测清单<br>357新词条已计入下午120分钟，不重复计时</small></div></div><div class="td-plan-foot">建议顺序：上午101+211，下午357，晚上448+错题复测。总时长是执行模板，不是南大官方要求；当天较弱科可在总量内调换20-30分钟。</div></section>';}
 function tdWeekPlanHtml(D){var z=tdDateInfo(D.date||tdBJDate()),names=['一','二','三','四','五','六','日'],cells=[];for(var i=0;i<7;i++){var date=tdDayDateString(z.monday+i),e=td211TaskFor(date),p=tdPsgTaskFor(date),w=tdWriteTaskFor(date),yr=String(w.source||'').match(/202[12]/);cells.push('<div class="td-week-day'+(date===D.date?' today':'')+'"><strong>周'+names[i]+'<em>'+(date===D.date?'今天':date.slice(5))+'</em></strong><div class="td-week-line"><b>211</b><span>'+esc(e.label.replace(/^211\s*/,''))+' · '+esc(e.sourceGrade)+'级'+(e.kind==='writing'?'回忆题原题照录':'能力训练')+'</span></div><div class="td-week-line"><b>357</b><span>'+esc((p.genre?p.genre+' · ':'')+p.direction+' · '+p.school+' '+p.year)+' · 题面'+esc(p.grade)+'/参考'+esc(p.referenceGrade)+'</span></div><div class="td-week-line"><b>448</b><span>'+esc(w.label.replace(/^448\s*/,''))+(yr?' · 与'+yr[0]+'名解同年':'')+'</span></div></div>');}return '<details class="td-week" data-testid="td-week-plan"><summary><b>本周真题化路线</b><small>211多校回忆题与能力训练轮换 · 357题材轮换且周三/周六优先南大 · 448同年名解+写作</small></summary><div class="td-week-scroll"><div class="td-week-grid">'+cells.join('')+'</div></div><span class="td-week-legend">资料等级：C=回忆题/黄皮书收录，可训练；D=同型训练或参考答案存在风险，只作练习与诊断，不冒充官方标准答案。211写作回忆题保留原卷措辞，均非南大题。</span></details>';}
-function tdNextAction(D){var R=tdQualification(D),L=tdListenPlan(D);if(!D.done.politics)return{key:'politics',label:'先完成 101 政治',detail:'登记教材/题库和章节范围，再做'+D.politicsPlan.target+'题并写错因与闭卷框架'};if(!D.done.vocab)return{key:'vocab',label:'开始 211 今日词汇',detail:'20分钟 · 10词首测至少8/10'};if(!D.done.read)return{key:'read',label:'完成 '+D.e211.label,detail:'40分钟 · 输出不少于'+D.e211.minUnits+'个英文词'};if(!D.done.listen)return{key:'listen',label:'完成 211 听说复述',detail:L.minutes+'分钟 · 影子跟读后关原文复述'};if(!D.done.trans||!R.doneMap.trans)return{key:D.done.trans?'transRevision':'trans',label:D.done.trans?'填写 357 结构化订正单':'开始 357 完整篇章',detail:'初译60 + 修订30 + 表达/错句15 · 最低完整输出 '+R.transMinUnits+(PSG[D.psg].d==='英译汉'?'字':'词')};if(!D.done.neu)return{key:'neu',label:'新学 357 词条',detail:'15分钟 · 最多10张'};if(!D.done.drill)return{key:'drill',label:'闭卷抽背 448 名解',detail:'30分钟 · '+tdNcuDrillYear(D)+'回忆题同年题池 · 首测至少5/6'};if(!D.done.write||!R.doneMap.write)return{key:D.done.write?'writeRevision':'write',label:D.done.write?'填写 448 写作修订记录':'完成 '+D.wLabel,detail:D.wTask.minutes+'分钟 · 最低输出'+D.wTask.minUnits+'字 · 合格线'+D.wTask.pass+'/'+D.wTask.max};if(!D.done.rev)return{key:'rev',label:'处理跨科到期复习',detail:'只做最早到期，最多'+TD_REVIEW_CAP+'张'};if(!(D.gt&&D.gt.done&&D.gt.passed))return{key:'night',label:'进行晚间卡片复测',detail:'错题优先，正确率至少80%'};if(!tdRetestReady(D))return{key:'retest',label:'写四科明日复测清单',detail:'每科写具体题号、错句或漏点，不写空泛总结'};if(!R.qualified)return{key:'quality',label:'补齐未通过的合格门',detail:R.blockers[0]||'检查独立作答确认与四道合格门'};return{key:'done',label:'今日训练已收口',detail:'四道门已通过；可以生成日报'};}
+function tdNextAction(D){var R=tdQualification(D),L=tdListenPlan(D),PL=tdPoliticsLessonFor(D);if(!D.done.politics)return{key:'politics',label:'先完成 101 政治',detail:(PL?PL.subjectShort+' · '+PL.title+'；':'')+'学习页面知识点，完成对应'+D.politicsPlan.target+'题并写错因与闭卷框架'};if(!D.done.vocab)return{key:'vocab',label:'开始 211 今日词汇',detail:'20分钟 · 10词首测至少8/10'};if(!D.done.read)return{key:'read',label:'完成 '+D.e211.label,detail:'40分钟 · 输出不少于'+D.e211.minUnits+'个英文词'};if(!D.done.listen)return{key:'listen',label:'完成 211 听说复述',detail:L.minutes+'分钟 · 影子跟读后关原文复述'};if(!D.done.trans||!R.doneMap.trans)return{key:D.done.trans?'transRevision':'trans',label:D.done.trans?'填写 357 结构化订正单':'开始 357 完整篇章',detail:'初译60 + 修订30 + 表达/错句15 · 最低完整输出 '+R.transMinUnits+(PSG[D.psg].d==='英译汉'?'字':'词')};if(!D.done.neu)return{key:'neu',label:'新学 357 词条',detail:'15分钟 · 最多10张'};if(!D.done.drill)return{key:'drill',label:'闭卷抽背 448 名解',detail:'30分钟 · '+tdNcuDrillYear(D)+'回忆题同年题池 · 首测至少5/6'};if(!D.done.write||!R.doneMap.write)return{key:D.done.write?'writeRevision':'write',label:D.done.write?'填写 448 写作修订记录':'完成 '+D.wLabel,detail:D.wTask.minutes+'分钟 · 最低输出'+D.wTask.minUnits+'字 · 合格线'+D.wTask.pass+'/'+D.wTask.max};if(!D.done.rev)return{key:'rev',label:'处理跨科到期复习',detail:'只做最早到期，最多'+TD_REVIEW_CAP+'张'};if(!(D.gt&&D.gt.done&&D.gt.passed))return{key:'night',label:'进行晚间卡片复测',detail:'错题优先，正确率至少80%'};if(!tdRetestReady(D))return{key:'retest',label:'写四科明日复测清单',detail:'每科写具体题号、错句或漏点，不写空泛总结'};if(!R.qualified)return{key:'quality',label:'补齐未通过的合格门',detail:R.blockers[0]||'检查独立作答确认与四道合格门'};return{key:'done',label:'今日训练已收口',detail:'四道门已通过；可以生成日报'};}
 function tdStageOpen(id,title,sub,done,total){var pct=Math.round((done||0)/Math.max(1,total||1)*100);return '<section class="td-stage" id="'+id+'"><div class="td-stage-head"><div><b>'+title+'</b><small>'+sub+'</small></div><span class="td-stage-progress" role="progressbar" aria-label="'+esc(title)+'完成度" aria-valuemin="0" aria-valuemax="'+total+'" aria-valuenow="'+done+'" style="--td-stage-pct:'+pct+'%"><strong>'+done+'/'+total+'</strong><i></i></span></div>';}
-function tdPoliticsProofHtml(D){var P=D.politics||{},plan=D.politicsPlan||tdPoliticsPlan();return '<div class="td-proof" data-testid="td-politics-proof">'
+function tdPoliticsLessonHtml(D){var P=D.politics||{},L=tdPoliticsLessonFor(D),progress=tdPoliticsProgress(),done=tdPoliticsState().completed;if(!L)return'';var tree=TD_POLITICS_TREE.map(function(subject){var rows=subject.lessons.map(function(row){var lesson=tdPoliticsLessonById(row[0]),isToday=lesson.id===L.id,isDone=!!done[lesson.id];return '<li><details class="td-pol-item'+(isToday?' today':'')+(isDone?' done':'')+'" data-testid="td-politics-tree-lesson"'+(isToday?' open':'')+'><summary><span>'+(isDone?'✓':lesson.subjectIndex)+'</span><b>'+esc(lesson.title)+'</b><i>'+(isToday?'今日':(isDone?'已完成':'待学习'))+'</i></summary><ul>'+lesson.points.map(function(point){return '<li>'+esc(point)+'</li>';}).join('')+'</ul><p>'+esc(lesson.questions)+'</p></details></li>';}).join('');return '<details class="td-pol-subject"'+(subject.id===L.subjectId?' open':'')+'><summary>'+esc(subject.name)+'<span>'+subject.lessons.length+' 节</span></summary><ol class="td-pol-lessons">'+rows+'</ol></details>';}).join('');return '<section class="td-pol-lesson" data-testid="td-politics-lesson"><div class="td-pol-head"><div><span class="td-pol-kicker">今日知识单元 · '+esc(L.subjectShort)+'</span><h3>'+esc(L.title)+'</h3></div><span class="td-pol-count">主线 '+progress.done+' / '+progress.total+' 已完成 · 今日第 '+L.index+' 节</span></div><ul class="td-pol-points" data-testid="td-politics-points">'+L.points.map(function(point){return '<li>'+esc(point)+'</li>';}).join('')+'</ul><div class="td-pol-practice"><b>对应练习</b><span>'+esc(L.questions)+'</span></div><label class="td-pol-check"><input type="checkbox" id="tdPolConcept" data-testid="td-politics-concept"'+(P.conceptChecked?' checked':'')+'><span>我已逐条理解，并在不看页面的情况下复述了本节知识点</span></label><details class="td-pol-tree" data-testid="td-politics-tree"><summary>查看完整政治知识主线<small>5 科 · '+progress.total+' 节 · 完成一节后次日自动接续</small></summary><div class="td-pol-tree-body">'+tree+'</div></details></section>';}
+function tdPoliticsProofHtml(D){var P=D.politics||{},plan=D.politicsPlan||tdPoliticsPlan();return '<div class="td-proof" data-testid="td-politics-proof">'+tdPoliticsLessonHtml(D)
  +'<label>教材 / 题库名<input id="tdPolResource" data-testid="td-politics-resource" value="'+esc(P.resource||'')+'" placeholder="例：肖秀荣1000题 / 腿姐背诵手册"></label>'
  +'<label>章节 / 题号范围<input id="tdPolScope" data-testid="td-politics-scope" value="'+esc(P.scope||'')+'" placeholder="例：马原第2章 1—25题"></label>'
  +'<label>完成题数（至少 '+plan.target+'）<input id="tdPolAnswered" type="number" min="0" max="100" value="'+esc(P.answered||'')+'" placeholder="'+plan.target+'"></label>'
@@ -2589,7 +2696,7 @@ function tdPoliticsProofHtml(D){var P=D.politics||{},plan=D.politicsPlan||tdPoli
 function tdRevisionBox(id,title,value,placeholder,min){return '<div class="td-revision"><b>'+title+' · 至少'+min+'字，本机实时保存，停笔后同步云端</b><textarea id="'+id+'" rows="5" placeholder="'+esc(placeholder)+'">'+esc(value||'')+'</textarea></div>';}
 function tdQualityHtml(D){var R=tdQualification(D),Q=D.quality;var p=PSG[D.psg],pm=p?tdPsgMeta(p):{grade:'D',referenceGrade:'D',kind:'题源缺失'};var vr=tdPct(Q.vocab.firstCorrect,Q.vocab.total),dr=tdPct(Q.drill.firstCorrect,Q.drill.total);var pa=D.politics&&D.politics.answered?Math.round(D.politics.correct/D.politics.answered*100)+'%':'待填',politicsMaterial=!!(D.politics&&String(D.politics.resource||'').trim().length>=2&&String(D.politics.scope||'').trim().length>=2);var trusted=R.answerTrusted?'A/B级题源，可强判':'当前含C/D级资料：训练可判，争议答案仍需人工核验';return '<div class="td-quality'+(R.qualified?'':' fail')+'" data-testid="td-qualified"><div class="td-qhead"><div><b>'+ (R.qualified?'今日四科训练合格':'今日四科训练尚未合格') +'</b><small><span data-testid="td-task-count">任务 '+R.doneN+'/'+R.total+'</span> · <span data-testid="td-subject-count">科目 '+R.subjectsDoneN+'/4</span> · <span data-testid="td-gate-count">合格门 '+R.gatesDoneN+'/4</span> · '+esc(trusted)+'</small></div><span class="td-qresult">'+(R.qualified?'四道门已通过':'合格门 '+R.gatesDoneN+'/4')+'</span></div>'
  +'<div class="td-qgates">'
- +'<div class="td-qgate'+(R.gates.source?' ok':'')+'"><b>① 材料可用门</b><small>101'+(politicsMaterial?'已登记教材/题库与章节范围':'尚未登记教材/题库或章节范围')+' · '+tdSourceBadge(pm.grade,pm.kind)+'参考'+esc(pm.referenceGrade)+'级 · 211 '+esc(D.e211.sourceGrade)+'级 · 写作题面 '+esc(D.wTask.questionGrade||D.wTask.sourceGrade)+'级 / 训练 '+esc(D.wTask.trainingGrade||D.wTask.sourceGrade)+'级</small></div>'
+ +'<div class="td-qgate'+(R.gates.source?' ok':'')+'"><b>① 材料可用门</b><small>101'+(politicsMaterial?'已对应知识单元与题号':'尚未对应知识单元或题号')+' · '+tdSourceBadge(pm.grade,pm.kind)+'参考'+esc(pm.referenceGrade)+'级 · 211 '+esc(D.e211.sourceGrade)+'级 · 写作题面 '+esc(D.wTask.questionGrade||D.wTask.sourceGrade)+'级 / 训练 '+esc(D.wTask.trainingGrade||D.wTask.sourceGrade)+'级</small></div>'
  +'<div class="td-qgate'+(R.gates.process?' ok':'')+'"><b>② 过程门</b><small>四科有效产出 + 闭卷计时 + 357/448修订 + 听说复述</small></div>'
  +'<div class="td-qgate'+(R.gates.results?' ok':'')+'"><b>③ 结果门</b><small>政治首测 '+pa+' · 211词汇 '+vr+' · 主项 '+(Q.read.score==null?'待测':Q.read.score+'/'+D.e211.max)+' · 名解 '+dr+' · 357 '+(Q.trans.score==null?'待测':Q.trans.score+'%')+' · 写作 '+(Q.write.score==null?'待测':Q.write.score+'/'+D.wTask.max)+'</small></div>'
  +'<div class="td-qgate'+(R.gates.retention?' ok':'')+'" data-testid="td-night-pass"><b>④ 卡片保持门</b><small>'+(D.gt&&D.gt.done?('卡片晚测 '+D.gt.ok+'/'+D.gt.list.length+(D.gt.passed?' · 通过':' · 未达80%')):'卡片晚测待完成')+'；四科明日无提示复测清单 '+(tdRetestReady(D)?'已写':'未完成')+'</small></div></div>'
@@ -2612,7 +2719,8 @@ function aiTdPanelHtml(){
  h+=tdRoadmapHtml(D);
  h+='<div class="ai-td-brief">📋 本页负责 AI 可批改输出；101做题证据、357/448订正单、听说复述和四科明日复测清单都在「今日学习」保存。复习卡每日上限 <b>'+TD_REVIEW_CAP+'</b> 张。</div>';
  h+='<div class="td-list">';
- h+='<div class="td-task'+(D.done.politics?' ok':'')+'"><span class="td-check">'+(D.done.politics?'✓':'')+'</span><div class="td-tb"><b>🏛️ 101 政治 · '+esc(D.politicsPlan.phase)+'</b><small>'+esc(D.politicsPlan.label)+'；必须记录题量、错因与闭卷框架，只看课不算完成。</small></div><button class="td-go" id="aiTdTodayPol">'+(D.done.politics?'查看证据':'去记录')+'</button></div>';
+ var polLesson=tdPoliticsLessonFor(D);
+ h+='<div class="td-task'+(D.done.politics?' ok':'')+'"><span class="td-check">'+(D.done.politics?'✓':'')+'</span><div class="td-tb"><b>🏛️ 101 政治 · '+esc(D.politicsPlan.phase)+'</b><small>'+(polLesson?esc(polLesson.subjectShort+' · '+polLesson.title+'；'+polLesson.questions+'。'):'')+'完成页面知识点复述、对应题量、错因与闭卷框架；只看课不算完成。</small></div><button class="td-go" id="aiTdTodayPol">'+(D.done.politics?'查看证据':'去学习')+'</button></div>';
  h+='<div class="td-task'+(D.done.vocab?' ok':'')+'"><span class="td-check">'+(D.done.vocab?'✓':'')+'</span>'
   +'<div class="td-tb"><b>🔤 今日词汇 10 词</b><small>先扫一遍今日词表（点击听发音 · 悬停看释义 · 划线=已过），再去 AI 判分；答错自动排队尾</small>'
   +'<div class="ai-td-chips">'+chips+'</div>'
@@ -2728,9 +2836,9 @@ function tdView(){
   if(QA.pos<QA.keys.length){revSub='今日队列已背 '+QA.pos+' / '+QA.keys.length+' 张 · 关掉再开自动从断点继续';revBtn='继续抽背';}
   else{revSub='今日计划的 '+QA.keys.length+' 张已完成；剩余积压进入后续日期';}
  }
- var polParts=D.politicsPlan.minutes>75?'25分钟教材理解 + 45分钟选择题 + 20分钟错因/闭卷框架':'20分钟教材理解 + 40分钟选择题 + 15分钟错因/闭卷框架';
+ var polLesson=tdPoliticsLessonFor(D),polParts=D.politicsPlan.minutes>75?'25分钟知识点学习 + 45分钟选择题 + 20分钟错因/闭卷框架':'20分钟知识点学习 + 40分钟选择题 + 15分钟错因/闭卷框架';
  h+=tdStageOpen('td-stage-morning','上午 · 基础输入转输出','101政治'+D.politicsPlan.minutes+'分 + 211英语75分',(+!!D.done.politics)+(+!!D.done.vocab)+(+!!D.done.read)+(+!!D.done.listen),4);
- h+=tdTaskRow('🏛️','101 政治 · '+esc(D.politicsPlan.phase),polParts+'；只看课不算完成','','',D.done.politics,(D.politics.answered||0)+'/'+D.politicsPlan.target,tdPoliticsProofHtml(D));
+ h+=tdTaskRow('🏛️','101 政治 · '+esc(D.politicsPlan.phase)+(polLesson?' · '+esc(polLesson.subjectShort)+'第'+polLesson.subjectIndex+'节':''),polParts+'；今日知识点：'+esc(polLesson?polLesson.title:'待生成')+'；只看课不算完成','','',D.done.politics,(D.politics.answered||0)+'/'+D.politicsPlan.target,tdPoliticsProofHtml(D));
  h+=tdTaskRow('🔤','211 词汇 10 词','20分钟 · 到期词优先，其余补新词 · 首轮至少8/10，答错订正后再出队','AI 陪练','tdBtnVoc',D.done.vocab,D.vDone+'/10');
  h+=tdTaskRow('📖',esc(D.e211.label),tdSourceBadge(D.e211.sourceGrade,D.e211.source+' · 非南大211原题'+(D.e211.verbatim?' · 原题照录':''))+D.e211.minutes+'分钟 · '+esc(D.e211.question)+'<br>合格线：'+D.e211.pass+'/'+D.e211.max+'，输出不少于'+D.e211.minUnits+(D.e211.kind==='writing'?'词':'个英文词'),'去训练','tdBtnRead',D.done.read,'');
  h+='<div class="td-listen-card'+(D.done.listen?' ok':'')+'" data-testid="td-listen-card">'
@@ -2774,10 +2882,11 @@ function bindTd(){
  var g=function(id){return document.getElementById(id);};var b;
  b=g('tdNextAction');if(b)b.addEventListener('click',function(){tdEnsure();var a=this.getAttribute('data-action'),target;
   if(a==='vocab')return tdStartVocab();if(a==='read')return tdStartRead();if(a==='trans')return tdStartTrans();if(a==='neu')return openQuiz('词条','new',st.daily.newGoal-st.daily.newCnt);if(a==='drill')return tdStartDrill();if(a==='write')return tdStartWrite();if(a==='rev')return openQuiz(null,'due',st.daily.revGoal);if(a==='night')return tdGtStart();if(a==='done')return tdSummary();
-  var ids={politics:'tdPolResource',listen:'tdListenNote',transRevision:'tdTransRevision',writeRevision:'tdWriteRevision',retest:'tdRetestPolitics',quality:'tdCkProtocol'};target=g(ids[a]);if(target){target.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){target.focus();},250);}
+  var ids={politics:'tdPolConcept',listen:'tdListenNote',transRevision:'tdTransRevision',writeRevision:'tdWriteRevision',retest:'tdRetestPolitics',quality:'tdCkProtocol'};target=g(ids[a]);if(target){target.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){target.focus();},250);}
  });
- function polSync(refresh){tdEnsure();var D=st.daily,P=D.politics||(D.politics={});var r=g('tdPolResource'),s=g('tdPolScope'),a=g('tdPolAnswered'),c=g('tdPolCorrect'),w=g('tdPolWrong'),f=g('tdPolFramework');P.resource=r?r.value.trim():'';P.scope=s?s.value.trim():'';P.answered=a?Math.max(0,+a.value||0):0;P.correct=c&&c.value!==''?Math.max(0,+c.value||0):'';P.wrongNote=w?w.value.trim():'';P.framework=f?f.value.trim():'';D.done.politics=tdPoliticsReady(D)?1:0;if(refresh)tdDraftCommit();else tdDraftSave();if(refresh)setTimeout(tdRefreshLite,0);}
+ function polSync(refresh){tdEnsure();var D=st.daily,P=D.politics||(D.politics={});var k=g('tdPolConcept'),r=g('tdPolResource'),s=g('tdPolScope'),a=g('tdPolAnswered'),c=g('tdPolCorrect'),w=g('tdPolWrong'),f=g('tdPolFramework');P.conceptChecked=k&&k.checked?1:0;P.resource=r?r.value.trim():'';P.scope=s?s.value.trim():'';P.answered=a?Math.max(0,+a.value||0):0;P.correct=c&&c.value!==''?Math.max(0,+c.value||0):'';P.wrongNote=w?w.value.trim():'';P.framework=f?f.value.trim():'';D.done.politics=tdPoliticsReady(D)?1:0;var completed=tdPoliticsState().completed;if(D.done.politics&&P.lessonId)completed[P.lessonId]=D.date||tdBJDate();else if(P.lessonId&&completed[P.lessonId]===(D.date||tdBJDate()))delete completed[P.lessonId];if(refresh)tdDraftCommit();else tdDraftSave();if(refresh)setTimeout(tdRefreshLite,0);}
  ['tdPolResource','tdPolScope','tdPolAnswered','tdPolCorrect','tdPolWrong','tdPolFramework'].forEach(function(id){var x=g(id);if(!x)return;x.addEventListener('input',function(){polSync(false);});x.addEventListener('change',function(){polSync(true);});});
+ b=g('tdPolConcept');if(b)b.addEventListener('change',function(){polSync(true);});
  b=g('tdBtnRev');if(b)b.addEventListener('click',function(){openQuiz(null,'due',st.daily.revGoal);});
  b=g('tdBtnNeu');if(b)b.addEventListener('click',function(){openQuiz('词条','new',st.daily.newGoal-st.daily.newCnt);});
  b=g('tdBtnVoc');if(b)b.addEventListener('click',tdStartVocab);
@@ -2828,8 +2937,8 @@ render=function(){
 /* 稳定的今日学习验收接口：供本地回归测试使用，不触发网络请求。 */
 window.tdPsgEligible=tdPsgEligible;window.tdPsgMeta=tdPsgMeta;window.tdWriteTaskFor=tdWriteTaskFor;
 window.tdQualification=tdQualification;window.tdGtBuild=tdGtBuild;window.tdGen=tdGen;
-window.tdScoreOf=tdScoreOf;window.td211TaskFor=td211TaskFor;window.tdPoliticsPlan=tdPoliticsPlan;window.tdPoliticsReady=tdPoliticsReady;
-window.tdVocabUsable=tdVocabUsable;window.tdTermNorm=tdTermNorm;window.tdNcuMsMeta=tdNcuMsMeta;window.tdNcuDrillYear=tdNcuDrillYear;window.tdDrawDrill=tdDrawDrill;window.tdTransMinUnits=tdTransMinUnits;window.tdNextAction=tdNextAction;window.tdWeekPlanHtml=tdWeekPlanHtml;window.tdRetestReady=tdRetestReady;window.tdDraftSave=tdDraftSave;window.tdSetSession=function(x){tdSession=x;};window.tdRoadmapHtml=tdRoadmapHtml;window.tdSelectSchoolPsg=tdSelectSchoolPsg;window.tdOnJudged=tdOnJudged;window.tdListenAudioToggle=tdListenAudioToggle;window.tdListenAudioStop=tdListenAudioStop;window.tdListenAudioView=tdListenAudioView;window.TD_DONE_KEYS=TD_DONE_KEYS;window.TD_NCU_MS=TD_NCU_MS;
+window.tdScoreOf=tdScoreOf;window.td211TaskFor=td211TaskFor;window.tdPoliticsPlan=tdPoliticsPlan;window.tdPoliticsLessons=tdPoliticsLessons;window.tdPoliticsCurrentLesson=tdPoliticsCurrentLesson;window.tdPoliticsLessonFor=tdPoliticsLessonFor;window.tdPoliticsLessonHtml=tdPoliticsLessonHtml;window.tdPoliticsReady=tdPoliticsReady;
+window.tdVocabUsable=tdVocabUsable;window.tdTermNorm=tdTermNorm;window.tdNcuMsMeta=tdNcuMsMeta;window.tdNcuDrillYear=tdNcuDrillYear;window.tdDrawDrill=tdDrawDrill;window.tdTransMinUnits=tdTransMinUnits;window.tdNextAction=tdNextAction;window.tdWeekPlanHtml=tdWeekPlanHtml;window.tdRetestReady=tdRetestReady;window.tdDraftSave=tdDraftSave;window.tdSetSession=function(x){tdSession=x;};window.tdRoadmapHtml=tdRoadmapHtml;window.tdSelectSchoolPsg=tdSelectSchoolPsg;window.tdOnJudged=tdOnJudged;window.tdListenAudioToggle=tdListenAudioToggle;window.tdListenAudioStop=tdListenAudioStop;window.tdListenAudioView=tdListenAudioView;window.TD_DONE_KEYS=TD_DONE_KEYS;window.TD_NCU_MS=TD_NCU_MS;window.TD_POLITICS_TREE=TD_POLITICS_TREE;
 setNav();
 })();
 </script>
