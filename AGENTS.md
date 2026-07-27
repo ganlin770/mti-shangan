@@ -15,11 +15,13 @@
 
 ## Git Publication
 
-- This repository has standing publication authorization whenever the current task explicitly includes `推送`, `改完推送`, `直接推送`, `提交并推送`, `push`, or equivalent wording.
-- For an authorized task, finish the implementation and checks, stage only the task's files, commit, and immediately publish the currently checked-out branch without asking for confirmation again. Do not stop after creating a local commit.
+- This repository has standing publication authorization for every task that asks to modify, fix, optimize, implement, add, remove, or otherwise change repository files. The user does not need to repeat `推送` or approve publication again.
+- After completing a requested change and passing the applicable checks, stage only that task's files, create an intentional commit, and immediately fast-forward push the currently checked-out branch. Do not stop at uncommitted changes or a local-only commit.
+- Keep a task local only when the user explicitly says `不要推送`, `仅本地修改`, `只给方案`, or equivalent wording, or when the request is read-only and does not authorize repository changes.
+- Follow the user's requested scope exactly. Do not include unrelated files or broaden the requested change merely because publication is automatic.
+- If implementation or verification fails, repair it and rerun the checks before publication. If publication remains blocked, exhaust safe authenticated routes and report the exact blocker; never claim that a push succeeded before verifying the remote branch.
 - Normal fast-forward publication through authenticated `git`, GitHub CLI, or the GitHub API is allowed; if one publication route is unavailable, use another authenticated route when safe.
-- Tasks that do not contain an explicit publication request remain local unless the user later authorizes publication.
-- After an authorized push, verify the local branch, remote branch, and deployment state separately when deployment is applicable.
+- After every push, verify the local branch, remote branch, and deployment state separately when deployment is applicable.
 - Never force-push, merge branches, delete branches or tags, or rewrite published history unless the user explicitly authorizes that exact operation.
 
 ## Safety
