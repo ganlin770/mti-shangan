@@ -22,7 +22,7 @@
 - If implementation or verification fails, repair it and rerun the checks before publication. If publication remains blocked, exhaust safe authenticated routes and report the exact blocker; never claim that a push succeeded before verifying the remote branch.
 - Normal fast-forward publication through authenticated `git`, GitHub CLI, or the GitHub API is allowed; if one publication route is unavailable, use another authenticated route when safe.
 - After every push, verify the local branch, remote branch, and deployment state separately when deployment is applicable.
-- Never force-push, merge branches, delete branches or tags, or rewrite published history unless the user explicitly authorizes that exact operation.
+- Force-push, branch merges, branch/tag deletion, and published-history rewrites are high-risk operations, but they are allowed when the user explicitly names the exact operation and target in the current task. Treat broad standing publication authorization as covering normal fast-forward publication only.
 
 ## Safety
 
