@@ -15,6 +15,50 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
     Object.setPrototypeOf(FixedDate, RealDate);
     window.Date = FixedDate;
     try { localStorage.clear(); } catch (_) {}
+    const speechProbe = { speak: 0, pause: 0, resume: 0, cancel: 0, current: null };
+    class FakeSpeechSynthesisUtterance {
+      constructor(text) {
+        this.text = text;
+        this.lang = '';
+        this.rate = 1;
+        this.voice = null;
+        this.onstart = null;
+        this.onend = null;
+        this.onerror = null;
+      }
+    }
+    const fakeSpeech = {
+      speaking: false,
+      pending: false,
+      paused: false,
+      getVoices: () => [],
+      speak(utterance) {
+        speechProbe.speak += 1;
+        speechProbe.current = utterance;
+        this.speaking = true;
+        this.pending = false;
+        this.paused = false;
+        if (typeof utterance.onstart === 'function') utterance.onstart();
+      },
+      pause() {
+        speechProbe.pause += 1;
+        this.paused = true;
+      },
+      resume() {
+        speechProbe.resume += 1;
+        this.paused = false;
+      },
+      cancel() {
+        speechProbe.cancel += 1;
+        this.speaking = false;
+        this.pending = false;
+        this.paused = false;
+        speechProbe.current = null;
+      }
+    };
+    window.__speechProbe = speechProbe;
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', { value: FakeSpeechSynthesisUtterance, configurable: true });
+    Object.defineProperty(window, 'speechSynthesis', { value: fakeSpeech, configurable: true });
   }, Date.parse('2026-07-27T08:00:00+08:00'));
 
   const page = await context.newPage();
@@ -38,7 +82,8 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
       'tdBuildDueQueue', 'tdBuildNewQueue', 'tdPsgEligible',
       'tdWriteTaskFor', 'td211TaskFor', 'tdPoliticsReady', 'tdVocabUsable', 'tdNcuMsMeta', 'tdDrawDrill',
       'tdNcuDrillYear', 'tdTransMinUnits', 'tdNextAction', 'tdWeekPlanHtml',
-      'tdRoadmapHtml', 'tdRetestReady', 'tdDraftSave', 'tdSetSession', 'tdQualification', 'tdGtBuild', 'tdOnJudged'
+      'tdRoadmapHtml', 'tdRetestReady', 'tdDraftSave', 'tdSetSession', 'tdQualification', 'tdGtBuild', 'tdOnJudged',
+      'tdListenAudioToggle', 'tdListenAudioStop', 'tdListenAudioView'
     ];
     const missing = required.filter((name) => typeof window[name] !== 'function');
     if (missing.length) return { missing };
@@ -573,6 +618,92 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
   assert.equal(result.noHorizontalOverflow, true, 'desktop today view overflows horizontally');
   assert.deepEqual(pageErrors, [], `page errors: ${pageErrors.join('; ')}`);
 
+  await page.evaluate(() => {
+    tdListenAudioStop('');
+    Object.assign(window.__speechProbe, { speak: 0, pause: 0, resume: 0, cancel: 0, current: null });
+    cur = 'today';
+    render();
+  });
+  const listenToggle = page.getByTestId('td-listen-toggle');
+  const listenStatus = page.getByTestId('td-listen-status');
+  const listenUi = async () => page.evaluate(() => {
+    const toggle = document.querySelector('[data-testid="td-listen-toggle"]');
+    const status = document.querySelector('[data-testid="td-listen-status"]');
+    return {
+      state: toggle?.getAttribute('data-state') || '',
+      pressed: toggle?.getAttribute('aria-pressed') || '',
+      text: toggle?.textContent.trim() || '',
+      status: status?.textContent.trim() || '',
+      probe: { ...window.__speechProbe, current: !!window.__speechProbe.current }
+    };
+  });
+  let audioState = await listenUi();
+  assert.equal(audioState.state, 'idle');
+  assert.equal(audioState.pressed, 'false');
+  assert.match(audioState.text, /开始播放|重新播放/);
+
+  await listenToggle.click();
+  audioState = await listenUi();
+  assert.equal(audioState.state, 'playing', `listen did not enter playing: ${JSON.stringify(audioState)}`);
+  assert.equal(audioState.pressed, 'true');
+  assert.match(audioState.text, /暂停/);
+  assert.match(audioState.status, /正在播放/);
+  assert.equal(audioState.probe.speak, 1, 'today listening did not start one utterance');
+
+  await listenToggle.click();
+  audioState = await listenUi();
+  assert.equal(audioState.state, 'paused', `listen did not pause: ${JSON.stringify(audioState)}`);
+  assert.match(audioState.text, /继续/);
+  assert.equal(audioState.probe.pause, 1, 'pause was not forwarded to speechSynthesis');
+
+  await listenToggle.click();
+  audioState = await listenUi();
+  assert.equal(audioState.state, 'playing', `listen did not resume: ${JSON.stringify(audioState)}`);
+  assert.equal(audioState.probe.resume, 1, 'resume was not forwarded to speechSynthesis');
+  assert.equal(audioState.probe.speak, 1, 'resume restarted the material instead of continuing it');
+
+  await page.evaluate(() => render());
+  audioState = await listenUi();
+  assert.equal(audioState.state, 'playing', `Today re-render lost the active listening state: ${JSON.stringify(audioState)}`);
+  assert.match(audioState.text, /暂停/);
+
+  await page.locator('#tdListenStop').click();
+  audioState = await listenUi();
+  assert.equal(audioState.state, 'idle');
+  assert.match(audioState.status, /已停止/);
+  assert(audioState.probe.cancel >= 1, 'stop did not cancel speechSynthesis');
+
+  await listenToggle.click();
+  const cancelBeforeLeave = await page.evaluate(() => window.__speechProbe.cancel);
+  await page.evaluate(() => go('dash'));
+  assert((await page.evaluate(() => window.__speechProbe.cancel)) > cancelBeforeLeave, 'leaving Today did not stop listening audio');
+  await page.evaluate(() => go('today'));
+  audioState = await listenUi();
+  assert.equal(audioState.state, 'idle', `listening state leaked after navigation: ${JSON.stringify(audioState)}`);
+
+  const desktopListenLayout = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector)?.getBoundingClientRect();
+    const card = rect('[data-testid="td-listen-card"]');
+    const controls = rect('[data-testid="td-listen-controls"]');
+    const retell = rect('[data-testid="td-listen-retell"]');
+    const toggle = rect('[data-testid="td-listen-toggle"]');
+    const inside = (child, parent) => !!child && !!parent && child.left >= parent.left - 1
+      && child.right <= parent.right + 1 && child.top >= parent.top - 1 && child.bottom <= parent.bottom + 1;
+    const host = document.querySelector('[data-testid="td-listen-card"]');
+    return {
+      noOverflow: !!host && host.scrollWidth <= host.clientWidth + 1,
+      controlsInside: inside(controls, card),
+      retellInside: inside(retell, card),
+      ordered: !!controls && !!retell && controls.bottom <= retell.top + 1,
+      toggleHeight: toggle?.height || 0
+    };
+  });
+  assert.equal(desktopListenLayout.noOverflow, true, `desktop listening card overflows: ${JSON.stringify(desktopListenLayout)}`);
+  assert.equal(desktopListenLayout.controlsInside, true, 'desktop listening controls escaped their card');
+  assert.equal(desktopListenLayout.retellInside, true, 'desktop retell field escaped its card');
+  assert.equal(desktopListenLayout.ordered, true, 'desktop listening controls overlap the retell field');
+  assert(desktopListenLayout.toggleHeight >= 44, `desktop listening control is below 44px: ${desktopListenLayout.toggleHeight}`);
+
   const mobile = await context.newPage();
   const mobileErrors = [];
   mobile.on('pageerror', (error) => mobileErrors.push(error.message));
@@ -597,9 +728,21 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
     };
     const mnav = document.getElementById('mnav');
     const mnavRect = mnav ? mnav.getBoundingClientRect() : null;
-    const majorButtons = [...document.querySelectorAll('.td-next-btn,.td-go,.td-tech>.ai-send,.td-sumbox>.ai-send')]
+    const majorButtons = [...document.querySelectorAll('.td-next-btn,.td-go,.td-tech>.ai-send,.td-sumbox>.ai-send,.td-listen-toggle,.td-listen-stop')]
       .filter(isVisible)
       .map((button) => ({ id: button.id, text: button.textContent.trim(), height: button.getBoundingClientRect().height }));
+    const listenCard = document.querySelector('[data-testid="td-listen-card"]');
+    const listenControls = document.querySelector('[data-testid="td-listen-controls"]');
+    const listenRetell = document.querySelector('[data-testid="td-listen-retell"]');
+    const listenToggle = document.querySelector('[data-testid="td-listen-toggle"]');
+    const listenComplete = document.querySelector('.td-listen-complete');
+    const cardRect = listenCard?.getBoundingClientRect();
+    const controlsRect = listenControls?.getBoundingClientRect();
+    const retellRect = listenRetell?.getBoundingClientRect();
+    const toggleRect = listenToggle?.getBoundingClientRect();
+    const completeRect = listenComplete?.getBoundingClientRect();
+    const insideCard = (child) => !!child && !!cardRect && child.left >= cardRect.left - 1
+      && child.right <= cardRect.right + 1 && child.top >= cardRect.top - 1 && child.bottom <= cardRect.bottom + 1;
     return {
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       planColumns: columns('.td-plan-grid'),
@@ -612,7 +755,17 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
         height: mnavRect ? mnavRect.height : 0,
         insideViewport: !!mnavRect && mnavRect.bottom <= innerHeight + 1 && mnavRect.bottom >= innerHeight - 2
       },
-      majorButtons
+      majorButtons,
+      listen: {
+        noOverflow: !!listenCard && listenCard.scrollWidth <= listenCard.clientWidth + 1,
+        controlsInside: insideCard(controlsRect),
+        retellInside: insideCard(retellRect),
+        controlsBeforeRetell: !!controlsRect && !!retellRect && controlsRect.bottom <= retellRect.top + 1,
+        toggleHeight: toggleRect?.height || 0,
+        completeHeight: completeRect?.height || 0,
+        toggleWidth: toggleRect?.width || 0,
+        controlsWidth: controlsRect?.width || 0
+      }
     };
   });
   assert.equal(mobileState.overflow, false, '390px today view overflows horizontally');
@@ -625,6 +778,13 @@ const base = process.env.MTI_BASE_URL || 'http://127.0.0.1:4173/';
   assert(mobileState.mnav.height >= 44, `mobile navigation tap area is below 44px: ${mobileState.mnav.height}`);
   assert(mobileState.majorButtons.length >= 3, `not enough visible primary actions for mobile QA: ${JSON.stringify(mobileState.majorButtons)}`);
   assert(mobileState.majorButtons.every((button) => button.height >= 44), `mobile primary action below 44px: ${JSON.stringify(mobileState.majorButtons)}`);
+  assert.equal(mobileState.listen.noOverflow, true, `390px listening card overflows: ${JSON.stringify(mobileState.listen)}`);
+  assert.equal(mobileState.listen.controlsInside, true, '390px listening controls escaped their card');
+  assert.equal(mobileState.listen.retellInside, true, '390px retell field escaped its card');
+  assert.equal(mobileState.listen.controlsBeforeRetell, true, '390px listening controls overlap the retell field');
+  assert(mobileState.listen.toggleHeight >= 44, `390px listening toggle is below 44px: ${mobileState.listen.toggleHeight}`);
+  assert(mobileState.listen.completeHeight >= 44, `390px completion control is below 44px: ${mobileState.listen.completeHeight}`);
+  assert(mobileState.listen.toggleWidth >= mobileState.listen.controlsWidth * 0.55, `390px play control is still squeezed: ${JSON.stringify(mobileState.listen)}`);
   assert.match(mobileState.total, /420\s*分钟/);
   assert.deepEqual(mobileErrors, [], `mobile page errors: ${mobileErrors.join('; ')}`);
 
