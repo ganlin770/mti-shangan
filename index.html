@@ -2198,10 +2198,35 @@ function qTermFitLine(el,minSize){
  el.style.fontSize=best.toFixed(2)+'px';
  el.classList.toggle('is-scrollable',el.scrollWidth>el.clientWidth+1);
 }
+function qTermFitLines(el,minSize,maxLines){
+ if(!el||!el.clientWidth)return;
+ var stored=parseFloat(el.getAttribute('data-fit-max'));
+ var maxSize=stored||parseFloat(getComputedStyle(el).fontSize)||24;
+ if(!stored)el.setAttribute('data-fit-max',String(maxSize));
+ var fits=function(){
+  var style=getComputedStyle(el),lineHeight=parseFloat(style.lineHeight)||parseFloat(style.fontSize)*1.5;
+  var padding=(parseFloat(style.paddingTop)||0)+(parseFloat(style.paddingBottom)||0);
+  return el.scrollHeight-padding<=lineHeight*maxLines+1;
+ };
+ var lo=Math.min(minSize,maxSize),hi=maxSize,best=lo;
+ el.style.fontSize=maxSize+'px';
+ if(fits())best=maxSize;
+ else for(var i=0;i<10;i++){
+  var mid=(lo+hi)/2;el.style.fontSize=mid+'px';
+  if(fits()){best=mid;lo=mid;}else hi=mid;
+ }
+ el.style.fontSize=(Math.floor(best*100)/100).toFixed(2)+'px';
+ if(!fits())el.style.fontSize=Math.min(minSize,maxSize)+'px';
+ el.classList.remove('is-scrollable');
+}
 function qTermFitAnswer(answer,source){
  var fit=function(){
   var narrow=window.innerWidth<=340;
-  qTermFitLine(answer,narrow?13.5:window.innerWidth<900?14.5:18);
+  var longAnswer=!!answer.closest('.qterm-sheet.is-long');
+  var answerLength=(answer.textContent||'').length;
+  var longLines=window.innerWidth<900?(answerLength>160?5:answerLength>110?4:3):(answerLength>160?4:answerLength>110?3:2);
+  if(longAnswer)qTermFitLines(answer,narrow?13.5:window.innerWidth<900?14.5:18,longLines);
+  else qTermFitLine(answer,narrow?13.5:window.innerWidth<900?14.5:18);
   qTermFitLine(source,narrow?9:11);
  };
  requestAnimationFrame(fit);
@@ -3148,7 +3173,7 @@ setNav();
 #qc.qcard-term .qterm-answer.is-scrollable{cursor:ew-resize}
 #qc.qcard-term .qterm-sheet.is-short .qterm-answer{font-size:38px}
 #qc.qcard-term .qterm-sheet.is-medium .qterm-answer{font-size:30px}
-#qc.qcard-term .qterm-sheet.is-long .qterm-answer{font-family:"Arial Narrow","Aptos Narrow","Helvetica Neue",Arial,sans-serif;font-size:23px;line-height:1.5;letter-spacing:.004em}
+#qc.qcard-term .qterm-sheet.is-long .qterm-answer{font-family:"Noto Serif SC",Georgia,serif;font-size:23px;line-height:1.48;letter-spacing:.004em;white-space:normal;overflow:visible;overscroll-behavior:auto;touch-action:auto;overflow-wrap:break-word;word-break:normal;text-wrap:balance}
 #qc.qcard-term .qterm-source{position:relative;z-index:1;display:block;flex:0 0 auto;width:100%;margin:12px 0 0;padding:14px 0 .18em;border-top:1px solid rgba(46,74,56,.14);color:var(--ink);font-family:"Noto Sans SC","PingFang SC",sans-serif;font-size:18px;font-weight:500;line-height:1.5;letter-spacing:.025em;white-space:nowrap;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
 #qc.qcard-term .qterm-source.is-scrollable{cursor:ew-resize}
 #qc.qcard-term .qterm-section.is-memory{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:start;column-gap:24px;padding:22px 26px;background:linear-gradient(135deg,rgba(196,158,66,.09),rgba(255,255,255,.34))}
@@ -3186,7 +3211,7 @@ setNav();
  #qc.qcard-term .qterm-back{padding:10px}
  #qc.qcard-term .qterm-sheet{gap:12px;padding:5px 0}
  #qc.qcard-term .qterm-section{padding:14px}
- #qc.qcard-term .qterm-section.is-primary{min-height:154px;padding:16px}
+ #qc.qcard-term .qterm-section.is-primary{min-height:154px;padding:16px 12px}
  #qc.qcard-term .qterm-head{margin-bottom:12px}
  #qc.qcard-term .qterm-title{padding-left:9px;font-size:15px}
  #qc.qcard-term .qterm-sheet.is-short .qterm-answer{font-size:24px}

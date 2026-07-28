@@ -21,7 +21,14 @@ const viewports = [
       await page.goto(url.href, { waitUntil: 'domcontentloaded' });
 
       const cards = await page.evaluate(async () => {
-        const wanted = ['加沙地带', 'Gaza Strip', 'GNP', '四风'];
+        const wanted = [
+          '加沙地带',
+          'Gaza Strip',
+          'GNP',
+          '四风',
+          '空谈误国，实干兴邦。',
+          '六保（保居民就业、保基本民生、保市场主体、保粮食能源安全、保产业链供应链稳定、保基层运转）'
+        ];
         const results = [];
         for (const question of wanted) {
           const item = POOL.find((entry) => entry.type === '词条' && entry.q === question);
@@ -42,19 +49,27 @@ const viewports = [
           const source = document.querySelector('.qterm-source');
           const primary = document.querySelector('.qterm-section.is-primary');
           const style = getComputedStyle(answer);
+          const answerIsLong = answer.closest('.qterm-sheet').classList.contains('is-long');
+          const answerLineHeight = parseFloat(style.lineHeight);
+          const answerPadding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+          const answerLineCount = Math.max(1, Math.ceil((answer.scrollHeight - answerPadding - 0.5) / answerLineHeight));
           const answerFitsWidth = answer.scrollWidth <= answer.clientWidth + 1;
-          if (!answerFitsWidth) answer.scrollLeft = answer.scrollWidth;
+          if (!answerIsLong && !answerFitsWidth) answer.scrollLeft = answer.scrollWidth;
           results.push({
             question,
             missing: false,
             answer: answer.textContent,
             source: source.textContent,
+            answerIsLong,
+            answerLineCount,
             answerWhiteSpace: style.whiteSpace,
             answerFontSize: parseFloat(style.fontSize),
             answerOverflowX: style.overflowX,
             answerScrollable: answer.classList.contains('is-scrollable'),
             answerFitsWidth,
             answerScrollLeft: answer.scrollLeft,
+            answerClientHeight: answer.clientHeight,
+            answerScrollHeight: answer.scrollHeight,
             sourceClientHeight: source.clientHeight,
             sourceScrollHeight: source.scrollHeight,
             sourceInsideCard: source.getBoundingClientRect().bottom <= primary.getBoundingClientRect().bottom + 1
@@ -65,20 +80,32 @@ const viewports = [
 
       for (const card of cards) {
         assert.equal(card.missing, false, `${viewport.width}px: missing ${card.question}`);
-        assert.equal(card.answerWhiteSpace, 'nowrap', `${viewport.width}px: English answer wrapped for ${card.question}`);
-        assert.ok(
-          card.answerFitsWidth || (card.answerScrollable && card.answerOverflowX === 'auto'),
-          `${viewport.width}px: English answer overflowed without horizontal access for ${card.question}`
-        );
-        if (!card.answerFitsWidth) {
-          assert.ok(card.answerScrollLeft > 0, `${viewport.width}px: English overflow could not be scrolled for ${card.question}`);
-        }
-        if (card.question === '四风') {
+        if (card.answerIsLong) {
+          assert.equal(card.answerWhiteSpace, 'normal', `${viewport.width}px: long English answer did not wrap for ${card.question}`);
+          if (card.answer.length <= 110) {
+            assert.ok(
+              card.answerLineCount <= (viewport.width < 900 ? 3 : 2),
+              `${viewport.width}px: long English answer used ${card.answerLineCount} lines for ${card.question}`
+            );
+          }
+          assert.ok(
+            card.answerClientHeight >= card.answerScrollHeight,
+            `${viewport.width}px: long English answer was vertically clipped for ${card.question}`
+          );
           const minimumReadableSize = viewport.width <= 340 ? 13.5 : viewport.width < 900 ? 14.5 : 18;
           assert.ok(
             card.answerFontSize >= minimumReadableSize,
             `${viewport.width}px: long English answer shrank below ${minimumReadableSize}px (${card.answerFontSize}px)`
           );
+        } else {
+          assert.equal(card.answerWhiteSpace, 'nowrap', `${viewport.width}px: short English answer wrapped for ${card.question}`);
+          assert.ok(
+            card.answerFitsWidth || (card.answerScrollable && card.answerOverflowX === 'auto'),
+            `${viewport.width}px: English answer overflowed without horizontal access for ${card.question}`
+          );
+          if (!card.answerFitsWidth) {
+            assert.ok(card.answerScrollLeft > 0, `${viewport.width}px: English overflow could not be scrolled for ${card.question}`);
+          }
         }
         assert.ok(
           card.sourceClientHeight >= card.sourceScrollHeight,
