@@ -2114,11 +2114,14 @@ openQuiz=function(ty,mode,limit){
  tdQzActive=null;
  var ovl=document.getElementById('ovl');
  if(S&&S.pos<S.keys.length){
-  var rest=S.keys.slice(S.pos).map(function(k){return AIPOOL[k];}).filter(Boolean);
-  if(rest.length){
-   queue=rest;qi=0;
+  var resumed=S.keys.map(function(k){return AIPOOL[k];}).filter(Boolean);
+  if(resumed.length){
+   var resumeKey=S.keys[S.pos],resumeAt=resumed.findIndex(function(x){return x.key===resumeKey;});
+   if(resumeAt<0)resumeAt=Math.min(S.pos,resumed.length-1);
+   queue=resumed;qi=resumeAt;
+   if(resumed.length!==S.keys.length){S.keys=resumed.map(function(x){return x.key;});S.pos=resumeAt;}
    if(ovl)ovl.classList.add('on');
-   tdQzActive={sig:sig,total:S.keys.length,base:S.pos};
+   tdQzActive={sig:sig,total:queue.length,base:0};
    renderQuiz();
    return;
   }

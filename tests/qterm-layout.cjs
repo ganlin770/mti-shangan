@@ -71,8 +71,57 @@ const viewports = [
       await page.close();
     }
 
+    const resumePage = await browser.newPage({ viewport: viewports[0] });
+    resumePage.on('pageerror', (error) => pageErrors.push(error.message));
+    const resumeUrl = new URL(base);
+    resumeUrl.searchParams.set('__quiz_resume', `${Date.now()}`);
+    await resumePage.goto(resumeUrl.href, { waitUntil: 'domcontentloaded' });
+    const resumed = await resumePage.evaluate(() => {
+      tdGen();
+      const cards = POOL.filter((entry) => entry.type === '词条').slice(0, 3);
+      st.daily.qzMap['词条'] = { keys: cards.map((entry) => entry.key), pos: 2 };
+      openQuiz('词条');
+      const initial = {
+        counter: document.querySelector('#quizbox .pg span:last-child').textContent,
+        question: document.querySelector('#qc .tm').textContent,
+        previousDisabled: document.getElementById('qprev').disabled,
+        queueLength: queue.length,
+        queueIndex: qi
+      };
+      document.getElementById('qprev').click();
+      const previous = {
+        counter: document.querySelector('#quizbox .pg span:last-child').textContent,
+        question: document.querySelector('#qc .tm').textContent,
+        previousDisabled: document.getElementById('qprev').disabled,
+        queueIndex: qi
+      };
+      document.getElementById('qflip').click();
+      return {
+        expectedCurrent: cards[2].q,
+        expectedPrevious: cards[1].q,
+        initial,
+        previous,
+        flipped: document.getElementById('qc').classList.contains('flip')
+      };
+    });
+    assert.deepEqual(resumed.initial, {
+      counter: '3 / 3',
+      question: resumed.expectedCurrent,
+      previousDisabled: false,
+      queueLength: 3,
+      queueIndex: 2
+    });
+    assert.deepEqual(resumed.previous, {
+      counter: '2 / 3',
+      question: resumed.expectedPrevious,
+      previousDisabled: false,
+      queueIndex: 1
+    });
+    assert.equal(resumed.flipped, true, 'resumed card did not flip');
+    await resumePage.close();
+
     assert.deepEqual(pageErrors, []);
-    console.log('PASS qterm layout: English stays on one line and Chinese answer is not clipped');
+    console.log('PASS qterm layout and resumed quiz navigation');
   } finally {
     await browser.close();
   }
