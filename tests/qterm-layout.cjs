@@ -86,7 +86,11 @@ const viewports = [
         question: document.querySelector('#qc .tm').textContent,
         previousDisabled: document.getElementById('qprev').disabled,
         queueLength: queue.length,
-        queueIndex: qi
+        queueIndex: qi,
+        aiPanelMounted: !!document.getElementById('aiQuizPanel'),
+        aiLaunchMounted: !!document.getElementById('aiQuizLaunch'),
+        aiPanelVisible: document.getElementById('aiQuizPanel').getBoundingClientRect().width > 0,
+        aiPanelLeftOfQuiz: document.getElementById('aiQuizPanel').getBoundingClientRect().right <= document.getElementById('quizbox').getBoundingClientRect().left
       };
       document.getElementById('qprev').click();
       const previous = {
@@ -109,7 +113,11 @@ const viewports = [
       question: resumed.expectedCurrent,
       previousDisabled: false,
       queueLength: 3,
-      queueIndex: 2
+      queueIndex: 2,
+      aiPanelMounted: true,
+      aiLaunchMounted: true,
+      aiPanelVisible: true,
+      aiPanelLeftOfQuiz: true
     });
     assert.deepEqual(resumed.previous, {
       counter: '2 / 3',

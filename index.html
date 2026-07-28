@@ -2059,8 +2059,7 @@ function aiQuizHide(){
  aiCardPanelDetach(p);
 }
 var _aiOpenQuiz=openQuiz;
-openQuiz=function(ty,mode,limit){
- _aiOpenQuiz(ty,mode,limit);
+function aiQuizMount(){
  var ovl=document.getElementById('ovl');
  if(!ovl||!ovl.classList.contains('on'))return;
  if(!document.getElementById('aiQuizBtn')){
@@ -2095,6 +2094,10 @@ openQuiz=function(ty,mode,limit){
    aiCardOpen(panel,x);
   });
  }
+}
+openQuiz=function(ty,mode,limit){
+ _aiOpenQuiz(ty,mode,limit);
+ aiQuizMount();
 };
 /* 切卡 / 关闭自测层时自动收起讲解面板 */
 var _aiRenderQuiz=renderQuiz;
@@ -2123,6 +2126,7 @@ openQuiz=function(ty,mode,limit){
    if(ovl)ovl.classList.add('on');
    tdQzActive={sig:sig,total:queue.length,base:0};
    renderQuiz();
+   aiQuizMount();
    return;
   }
  }
