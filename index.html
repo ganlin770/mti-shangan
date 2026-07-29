@@ -1650,6 +1650,177 @@ function aiExpShow(body,key,c,notice){
  var bar='<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' · '+esc(effort)+' · 本次未耗额度<button type="button" class="ai-pick ai-exp-regen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">按当前档位重新生成并覆盖</button></div>';
  aiPaint(body,(notice||'')+aiMd(c.x)+bar+aiExpQaHtml(c));
 }
+
+/* ---- AI 追问档案：本机 + 云端全量索引，按卡片系统阅读 ---- */
+var aiQaArchiveQuery='',aiQaArchiveType='all',aiQaArchivePeriod='all',aiQaArchiveSelected='';
+var aiQaArchiveMobileDetail=false,aiQaArchiveFocusKey='';
+var aiQaArchiveCloudState='idle',aiQaArchiveCloudItems=[],aiQaArchiveCloudError='',aiQaArchiveCloudToken=0;
+function aiQaArchiveTypeOf(x){return x&&x.type==='名解'?'ms':(x&&x.type==='词汇'?'vocab':'ci');}
+function aiQaArchiveTypeLabel(x){return x&&x.type==='名解'?'448 名解':(x&&x.type==='词汇'?'211 词汇':'357 词条');}
+function aiQaArchiveCardTitle(k,x){
+ if(x&&x.q)return x.q;
+ var base=String(k||'').split('@')[0],p=base.indexOf('|');
+ return p>=0?base.slice(p+1):'历史卡片';
+}
+function aiQaArchiveQaId(k,qa,r){
+ if(qa&&qa.id)return String(qa.id);
+ return 'legacy-'+aiCardHash(String(k)+'|'+String(qa&&qa.q||'')+'|'+String(qa&&qa.a||'')+'|'+String(qa&&qa.t||r&&r.t||0));
+}
+function aiQaArchiveRows(){
+ var rows=[],seen=Object.create(null),local=aiExpAll();
+ function addRecord(k,r,source){
+  if(!r||!Array.isArray(r.qa))return;
+  r.qa.forEach(function(qa){
+   if(!qa||!qa.a)return;
+   var id=aiQaArchiveQaId(k,qa,r),dedupe=String(k)+'\n'+id;
+   if(seen[dedupe])return;seen[dedupe]=1;
+   rows.push({cardKey:String(k),qa:Object.assign({},qa,{id:id,t:qa.t||r.t||0}),record:r,source:source||'local'});
+  });
+ }
+ Object.keys(local).forEach(function(k){addRecord(k,local[k],'local');});
+ Object.keys(aiExpMem).forEach(function(k){addRecord(k,aiExpMem[k],'memory');});
+ aiQaArchiveCloudItems.forEach(function(item){
+  if(!item||!item.cardKey||!item.qa||!item.qa.a)return;
+  var id=aiQaArchiveQaId(item.cardKey,item.qa,item.record),dedupe=String(item.cardKey)+'\n'+id;
+  if(seen[dedupe])return;seen[dedupe]=1;
+  rows.push({cardKey:String(item.cardKey),qa:Object.assign({},item.qa,{id:id}),record:item.record||null,source:'cloud'});
+ });
+ rows.sort(function(a,b){return (b.qa.t||0)-(a.qa.t||0);});return rows;
+}
+function aiQaArchiveData(){
+ var all=aiQaArchiveRows(),q=aiQaArchiveQuery.trim().toLowerCase(),cut=0;
+ if(aiQaArchivePeriod==='7')cut=Date.now()-7*86400000;
+ else if(aiQaArchivePeriod==='30')cut=Date.now()-30*86400000;
+ var filtered=all.filter(function(row){
+  var x=aiCardFromId(row.cardKey),ty=aiQaArchiveTypeOf(x);
+  if(aiQaArchiveType!=='all'&&ty!==aiQaArchiveType)return false;
+  if(cut&&(row.qa.t||0)<cut)return false;
+  if(!q)return true;
+  return (aiQaArchiveCardTitle(row.cardKey,x)+' '+(x&&x.a||'')+' '+(x&&x.cat||'')+' '+(row.qa.q||'')+' '+(row.qa.a||'')).toLowerCase().indexOf(q)>=0;
+ });
+ var map=Object.create(null),groups=[];
+ filtered.forEach(function(row){
+  var g=map[row.cardKey],x=aiCardFromId(row.cardKey);
+  if(!g){g=map[row.cardKey]={key:row.cardKey,card:x,title:aiQaArchiveCardTitle(row.cardKey,x),type:aiQaArchiveTypeOf(x),typeLabel:aiQaArchiveTypeLabel(x),cat:x&&x.cat||'',items:[],latest:0};groups.push(g);}
+  g.items.push(row);g.latest=Math.max(g.latest,row.qa.t||0);
+ });
+ groups.forEach(function(g){g.items.sort(function(a,b){return (a.qa.t||0)-(b.qa.t||0);});});
+ groups.sort(function(a,b){return b.latest-a.latest;});
+ if(!groups.some(function(g){return g.key===aiQaArchiveSelected;}))aiQaArchiveSelected=groups.length?groups[0].key:'';
+ return {all:all,filtered:filtered,groups:groups,selected:groups.filter(function(g){return g.key===aiQaArchiveSelected;})[0]||null};
+}
+function aiQaArchiveDateTime(t){
+ if(!t)return {text:'旧记录',iso:''};
+ var d=new Date(t);if(isNaN(d.getTime()))return {text:'旧记录',iso:''};
+ var now=new Date(),same=d.toDateString()===now.toDateString();
+ return {text:(same?'今天':((d.getMonth()+1)+'月'+d.getDate()+'日'))+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),iso:d.toISOString()};
+}
+function aiQaArchiveSyncLabel(){
+ if(aiQaArchiveCloudState==='loading')return '正在合并云端追问…';
+ if(aiQaArchiveCloudState==='done')return '云端已同步';
+ if(aiQaArchiveCloudState==='error')return '云端暂不可用 · 已展示本机记录';
+ if(aiQaArchiveCloudState==='offline')return '当前仅显示本机记录';
+ return '准备同步云端';
+}
+function aiQaArchiveSummaryHtml(data){
+ var cards=Object.create(null);data.all.forEach(function(r){cards[r.cardKey]=1;});
+ var latest=data.all.length?aiQaArchiveDateTime(data.all[0].qa.t).text:'还没有记录';
+ return '<div><b>'+data.all.length+'</b><span>条追问</span></div><div><b>'+Object.keys(cards).length+'</b><span>张学习卡</span></div><div class="qa-summary-latest"><b>'+esc(latest)+'</b><span>最近保存</span></div>';
+}
+function aiQaArchiveListHtml(data){
+ if(!data.all.length&&aiQaArchiveCloudState==='loading')return '<div class="qa-empty qa-empty-loading" data-testid="qa-empty"><span></span><b>正在整理你的追问档案</b><p>本机与云端记录正在合并，请稍候。</p></div>';
+ if(!data.all.length)return '<div class="qa-empty" data-testid="qa-empty"><div class="qa-empty-mark">?</div><b>还没有保存的追问</b><p>抽背时打开 AI 讲解并提问，回答会自动进入这里，形成你的第二本错题本。</p><button type="button" class="qa-primary qa-start">去抽背一张卡</button></div>';
+ if(!data.groups.length)return '<div class="qa-empty" data-testid="qa-empty"><div class="qa-empty-mark">⌕</div><b>没有找到相关追问</b><p>换个关键词或清除筛选后再看。</p><button type="button" class="qa-ghost qa-clear">清除筛选</button></div>';
+ return data.groups.map(function(g){
+  var last=g.items[g.items.length-1],dt=aiQaArchiveDateTime(g.latest),active=g.key===aiQaArchiveSelected;
+  return '<button type="button" class="qa-card'+(active?' is-active':'')+'" data-qa-key="'+encodeURIComponent(g.key)+'" data-testid="qa-card" aria-pressed="'+(active?'true':'false')+'">'
+   +'<span class="qa-card-top"><span class="qa-kind is-'+g.type+'">'+esc(g.typeLabel)+'</span><time'+(dt.iso?' datetime="'+dt.iso+'"':'')+'>'+esc(dt.text)+'</time></span>'
+   +'<strong>'+esc(g.title)+'</strong>'+(g.cat?'<small>'+esc(g.cat)+'</small>':'')
+   +'<span class="qa-card-preview">'+esc(last.qa.q||'未命名追问')+'</span><span class="qa-card-count">'+g.items.length+' 条追问 <i>查看 →</i></span></button>';
+ }).join('');
+}
+function aiQaArchiveDetailHtml(g){
+ if(!g)return '<div class="qa-detail-empty"><span>←</span><p>从左侧选择一张卡，集中复习这张卡的全部追问。</p></div>';
+ var canOpen=!!g.card,dt=aiQaArchiveDateTime(g.latest);
+ var turns=g.items.map(function(row,i){
+  var qa=row.qa,t=aiQaArchiveDateTime(qa.t),model=aiExpModelName(qa.m),effort=qa.e&&AI_EFFORT_META[qa.e]?AI_EFFORT_META[qa.e].label:'旧版档位未知';
+  return '<article class="qa-turn"><div class="qa-turn-meta"><span>追问 '+(i+1)+'</span><time'+(t.iso?' datetime="'+t.iso+'"':'')+'>'+esc(t.text)+'</time><span>'+esc(model+' · '+effort)+'</span></div>'
+   +'<h4><span>Q</span>'+esc(qa.q||'未命名追问')+'</h4><div class="qa-turn-answer"><span class="qa-a-mark">A</span><div>'+aiMd(qa.a||'（无内容返回）')+'</div></div></article>';
+ }).join('');
+ return '<button type="button" class="qa-mobile-back" data-testid="qa-mobile-back">← 返回追问列表</button>'
+  +'<header class="qa-detail-head"><div><span class="qa-kind is-'+g.type+'">'+esc(g.typeLabel)+'</span><span class="qa-detail-date">最近更新 · '+esc(dt.text)+'</span><h2 tabindex="-1" id="qaDetailTitle">'+esc(g.title)+'</h2>'+(g.card&&g.card.a?'<p>'+esc(g.card.a)+'</p>':'<p class="qa-orphan">原卡已不在当前题库，但历史追问仍会永久保留。</p>')+'</div>'
+  +'<button type="button" class="qa-primary qa-back-card" data-qa-key="'+encodeURIComponent(g.key)+'" data-testid="qa-back-to-card"'+(canOpen?'':' disabled')+'>'+(canOpen?'回到原卡':'原卡已变更')+'</button></header>'
+  +'<div class="qa-timeline">'+turns+'</div>';
+}
+function aiQaArchiveView(){
+ return '<div class="qa-archive" data-testid="qa-archive"><section class="qa-hero"><div class="qa-hero-copy"><span class="qa-eyebrow">AI STUDY ARCHIVE · 云端学习档案</span><h2 class="serif">把零散追问，变成<br>你的第二本错题本。</h2><p>按原卡片归档问题、回答、模型与思考深度；搜索一次，就能重新串起当时没弄懂的知识。</p></div><div class="qa-summary" id="qaSummary" data-testid="qa-summary"></div></section>'
+  +'<section class="qa-toolbar"><label class="qa-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input id="qaSearch" data-testid="qa-search" placeholder="搜索卡片、问题或回答…" value="'+esc(aiQaArchiveQuery).replace(/"/g,'&quot;')+'"></label>'
+  +'<div class="qa-types" data-testid="qa-filter-type" role="group" aria-label="按卡片类型筛选">'+[['all','全部'],['ci','357 词条'],['vocab','211 词汇'],['ms','448 名解']].map(function(x){return '<button type="button" class="qa-type'+(aiQaArchiveType===x[0]?' is-active':'')+'" data-qa-type="'+x[0]+'" aria-pressed="'+(aiQaArchiveType===x[0]?'true':'false')+'">'+x[1]+'</button>';}).join('')+'</div>'
+  +'<label class="qa-period">时间<select id="qaPeriod" data-testid="qa-filter-period"><option value="all"'+(aiQaArchivePeriod==='all'?' selected':'')+'>全部时间</option><option value="7"'+(aiQaArchivePeriod==='7'?' selected':'')+'>最近 7 天</option><option value="30"'+(aiQaArchivePeriod==='30'?' selected':'')+'>最近 30 天</option></select></label><button type="button" class="qa-refresh" id="qaRefresh" title="重新同步云端追问" aria-label="重新同步云端追问">↻</button></section>'
+  +'<div class="qa-sync" id="qaSync" data-testid="qa-sync-status" aria-live="polite"></div>'
+  +'<section class="qa-workspace"><aside class="qa-listpane"><div class="qa-list-head"><b id="qaVisibleCount">追问卡片</b><span>按最近追问排序</span></div><div class="qa-results" id="qaResults" data-testid="qa-results"></div></aside><section class="qa-detailpane" id="qaDetail" data-testid="qa-detail" aria-labelledby="qaDetailTitle"></section></section></div>';
+}
+function aiQaArchiveRefresh(){
+ var root=document.querySelector('.qa-archive');if(!root)return;
+ var data=aiQaArchiveData(),summary=document.getElementById('qaSummary'),results=document.getElementById('qaResults'),detail=document.getElementById('qaDetail');
+ if(summary)summary.innerHTML=aiQaArchiveSummaryHtml(data);
+ if(results)results.innerHTML=aiQaArchiveListHtml(data);
+ if(detail)detail.innerHTML=aiQaArchiveDetailHtml(data.selected);
+ var count=document.getElementById('qaVisibleCount');if(count)count.textContent=data.groups.length+' 张追问卡片';
+ var sync=document.getElementById('qaSync');if(sync){sync.className='qa-sync is-'+aiQaArchiveCloudState;sync.textContent=aiQaArchiveSyncLabel();sync.title=aiQaArchiveCloudError||'';}
+ root.classList.toggle('is-mobile-detail',!!(aiQaArchiveMobileDetail&&data.selected));
+}
+function aiQaArchiveMergeCloud(rows,legacy){
+ var byCard=Object.create(null);aiQaArchiveCloudItems=[];
+ (rows||[]).forEach(function(row){var p=row&&row.payload,qa=p&&p.kind==='followup'?p.qa:null,k=p&&p.card_key;
+  if(!k||!qa||!qa.a)return;(byCard[k]||(byCard[k]=[])).push(row);aiQaArchiveCloudItems.push({cardKey:String(k),qa:qa,record:null});});
+ Object.keys(byCard).forEach(function(k){aiExpCloudMergeCard(k,[],byCard[k]);});
+ if(legacy&&typeof legacy==='object')Object.keys(legacy).forEach(function(k){
+  var r=legacy[k];if(!r||!Array.isArray(r.qa))return;
+  var synthetic=r.qa.map(function(qa){return {payload:{kind:'followup',card_key:k,main_x:r.x||'',qa:qa}};});
+  aiExpCloudMergeCard(k,r.x?[{payload:{kind:'main',card_key:k,record:r}}]:[],synthetic);
+  r.qa.forEach(function(qa){aiQaArchiveCloudItems.push({cardKey:String(k),qa:qa,record:r});});
+ });
+}
+function aiQaArchiveCloudLoad(force){
+ if(aiQaArchiveCloudState==='loading')return;
+ if(aiQaArchiveCloudState==='done'&&!force)return;
+ if(!sb){aiQaArchiveCloudState='offline';aiQaArchiveRefresh();return;}
+ var token=++aiQaArchiveCloudToken,rows=[];aiQaArchiveCloudState='loading';aiQaArchiveCloudError='';aiQaArchiveRefresh();
+ function page(from){
+  return sb.from('progress').select('payload,updated_at').like('id',AIEXP_QA_PREFIX+'%').order('updated_at',{ascending:false}).range(from,from+499).then(function(res){
+   if(res&&res.error)throw new Error(res.error.message||'云端读取失败');
+   var part=res&&res.data||[];rows=rows.concat(part);return part.length===500?page(from+500):rows;
+  });
+ }
+ var legacy=sb.from('progress').select('payload').eq('id',SB_ID+'_exp').maybeSingle().then(function(res){return res&&res.data&&res.data.payload||null;}).catch(function(){return null;});
+ Promise.all([page(0),legacy]).then(function(data){
+  if(token!==aiQaArchiveCloudToken)return;aiQaArchiveMergeCloud(data[0],data[1]);aiQaArchiveCloudState='done';aiQaArchiveRefresh();
+ }).catch(function(e){if(token!==aiQaArchiveCloudToken)return;aiQaArchiveCloudState='error';aiQaArchiveCloudError=e&&e.message||'云端读取失败';aiQaArchiveRefresh();});
+}
+function aiQaArchiveOpenCard(k){
+ var x=aiCardFromId(k),saved=aiExpGet(k);if(!x||!saved)return;
+ tdQzActive=null;queue=[x];qi=0;
+ var ovl=document.getElementById('ovl');ovl.classList.add('on');renderQuiz();aiQuizMount();
+ var card=document.getElementById('qc');if(card)card.classList.add('flip');
+ var panel=document.getElementById('aiQuizPanel');if(panel)aiCardOpen(panel,x);
+}
+function bindAiQaArchive(){
+ var root=document.querySelector('.qa-archive'),search=document.getElementById('qaSearch'),period=document.getElementById('qaPeriod');if(!root)return;
+ if(search)search.addEventListener('input',function(){aiQaArchiveQuery=this.value;aiQaArchiveMobileDetail=false;aiQaArchiveRefresh();});
+ if(period)period.addEventListener('change',function(){aiQaArchivePeriod=this.value;aiQaArchiveMobileDetail=false;aiQaArchiveRefresh();});
+ root.addEventListener('click',function(ev){
+  var type=ev.target.closest('.qa-type');if(type){aiQaArchiveType=type.getAttribute('data-qa-type')||'all';aiQaArchiveMobileDetail=false;root.querySelectorAll('.qa-type').forEach(function(b){var on=b===type;b.classList.toggle('is-active',on);b.setAttribute('aria-pressed',on?'true':'false');});aiQaArchiveRefresh();return;}
+  var card=ev.target.closest('.qa-card');if(card){aiQaArchiveFocusKey=decodeURIComponent(card.getAttribute('data-qa-key')||'');aiQaArchiveSelected=aiQaArchiveFocusKey;aiQaArchiveMobileDetail=true;aiQaArchiveRefresh();setTimeout(function(){var h=document.getElementById('qaDetailTitle');if(h)h.focus();},0);return;}
+  var back=ev.target.closest('.qa-mobile-back');if(back){aiQaArchiveMobileDetail=false;aiQaArchiveRefresh();setTimeout(function(){var b=document.querySelector('.qa-card[data-qa-key="'+encodeURIComponent(aiQaArchiveFocusKey)+'"]');if(b)b.focus();},0);return;}
+  var open=ev.target.closest('.qa-back-card');if(open&&!open.disabled){aiQaArchiveOpenCard(decodeURIComponent(open.getAttribute('data-qa-key')||''));return;}
+  if(ev.target.closest('.qa-refresh')){aiQaArchiveCloudLoad(true);return;}
+  if(ev.target.closest('.qa-clear')){aiQaArchiveQuery='';aiQaArchiveType='all';aiQaArchivePeriod='all';var s=document.getElementById('qaSearch');if(s)s.value='';var p=document.getElementById('qaPeriod');if(p)p.value='all';root.querySelectorAll('.qa-type').forEach(function(b){var on=b.getAttribute('data-qa-type')==='all';b.classList.toggle('is-active',on);b.setAttribute('aria-pressed',on?'true':'false');});aiQaArchiveRefresh();return;}
+  if(ev.target.closest('.qa-start'))openQuiz('词条');
+ });
+ aiQaArchiveRefresh();aiQaArchiveCloudLoad(false);
+}
+window.aiQaArchiveRows=aiQaArchiveRows;window.aiQaArchiveCloudLoad=aiQaArchiveCloudLoad;
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
  var rb=tg.closest('.ai-exp-regen');
@@ -2039,9 +2210,13 @@ function aiDecorateMist(){
 
 /* ---- 注册导航（运行时注入，不改原数据行）---- */
 NAVG[0][1].push('ai');
+NAVG[0][1].push('aiqa');
 NAV.splice(1,0,['ai','AI 助教']);
+NAV.splice(2,0,['aiqa','追问档案']);
 MLB.ai='AI';
+MLB.aiqa='追问';
 IC.ai='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 4v3M9 15h6"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/></svg>';
+IC.aiqa='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5h10a4 4 0 0 1 4 4V18H9a4 4 0 0 0-4 2.5z"/><path d="M5 4.5v16M9 9h6M9 13h4"/><path d="m17.5 3 .5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5z"/></svg>';
 
 /* ---- 路由包装 ---- */
 var _aiRender=render;
@@ -2052,6 +2227,12 @@ render=function(){
    document.getElementById('view').innerHTML=aiView();
    bindAI();
   }
+  return;
+ }
+ if(cur==='aiqa'){
+  document.querySelector('h1').textContent='AI 追问档案';
+  document.getElementById('view').innerHTML=aiQaArchiveView();
+  bindAiQaArchive();
   return;
  }
  _aiRender();
@@ -3045,6 +3226,86 @@ setNav();
 .ai-ask-a{font-size:16px;line-height:2}
 .ai-ask-save{margin-top:8px;color:var(--mut);font-size:11.5px;line-height:1.5}
 .ai-ask-save.is-error{color:var(--rust)}
+/* AI 追问档案 · 纸张式双栏阅读 */
+.qa-archive{max-width:1180px;margin:0 auto 54px;color:var(--ink)}
+.qa-hero{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.75fr);gap:34px;align-items:end;overflow:hidden;margin-bottom:18px;padding:38px 42px;border-radius:22px;background:linear-gradient(135deg,#284334 0%,#365944 100%);color:#f6f1e7;box-shadow:0 18px 38px rgba(39,54,43,.13)}
+.qa-hero::before,.qa-hero::after{content:"";position:absolute;z-index:-1;border:1px solid rgba(255,255,255,.11);border-radius:50%}
+.qa-hero::before{width:330px;height:330px;right:-118px;top:-176px}
+.qa-hero::after{width:190px;height:190px;right:80px;bottom:-146px}
+.qa-eyebrow{display:block;margin-bottom:16px;color:#d6c69d;font-size:11px;font-weight:700;letter-spacing:.18em}
+.qa-hero h2{margin:0;font-size:clamp(30px,4vw,48px);font-weight:700;line-height:1.18;letter-spacing:.015em}
+.qa-hero-copy>p{max-width:650px;margin:18px 0 0;color:rgba(246,241,231,.72);font-size:14px;line-height:1.8}
+.qa-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:15px;background:rgba(255,255,255,.12);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+.qa-summary>div{display:flex;min-height:82px;flex-direction:column;justify-content:center;padding:14px 18px;background:rgba(19,37,27,.18)}
+.qa-summary>div:last-child{grid-column:1/-1;min-height:66px}
+.qa-summary b{font-family:Georgia,"Noto Serif SC",serif;font-size:25px;font-weight:600;line-height:1.2}
+.qa-summary .qa-summary-latest b{font-family:inherit;font-size:14px}
+.qa-summary span{margin-top:5px;color:rgba(246,241,231,.62);font-size:11px;letter-spacing:.07em}
+.qa-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:13px 14px;border:1px solid var(--line);border-radius:15px;background:rgba(253,252,248,.82);box-shadow:0 7px 20px rgba(55,47,35,.045)}
+.qa-search{display:flex;flex:1;min-width:210px;align-items:center;gap:9px;height:44px;padding:0 13px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.qa-search:focus-within{border-color:var(--green);box-shadow:0 0 0 3px rgba(46,74,56,.1)}
+.qa-search svg{width:17px;height:17px;flex:none;fill:none;stroke:var(--mut);stroke-width:1.8;stroke-linecap:round}
+.qa-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:13.5px}
+.qa-types{display:flex;align-items:center;gap:3px;padding:3px;border:1px solid var(--line);border-radius:11px;background:var(--paper)}
+.qa-type{min-height:36px;padding:0 11px;border:0;border-radius:8px;background:transparent;color:var(--mut);font-family:inherit;font-size:12px;font-weight:650;cursor:pointer;white-space:nowrap}
+.qa-type.is-active{background:var(--green);color:#f6f1e7;box-shadow:0 4px 10px rgba(46,74,56,.18)}
+.qa-period{display:flex;align-items:center;gap:6px;height:44px;padding:0 8px 0 11px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--mut);font-size:11px;white-space:nowrap}
+.qa-period select{border:0;outline:0;background:transparent;color:var(--green2);font-family:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.qa-refresh{width:44px;height:44px;flex:none;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--green2);font-size:21px;line-height:1;cursor:pointer}
+.qa-refresh:hover{background:rgba(46,74,56,.07)}
+.qa-sync{min-height:23px;margin:0 4px 9px;color:var(--mut);font-size:11.5px;text-align:right}
+.qa-sync::before{content:"";display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:#a9a294;vertical-align:1px}
+.qa-sync.is-done::before{background:#3d7658}.qa-sync.is-loading::before{background:#b58e34;animation:qaPulse 1s infinite}.qa-sync.is-error::before{background:var(--rust)}
+@keyframes qaPulse{50%{opacity:.3;transform:scale(.8)}}
+.qa-workspace{display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:16px;align-items:start}
+.qa-listpane,.qa-detailpane{border:1px solid var(--line);border-radius:18px;background:rgba(253,252,248,.84);box-shadow:0 10px 28px rgba(55,47,35,.05)}
+.qa-listpane{padding:17px 12px}
+.qa-list-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;padding:0 7px 13px}
+.qa-list-head b{color:var(--green2);font-size:13px}.qa-list-head span{color:var(--mut);font-size:10.5px}
+.qa-results{display:grid;gap:8px}
+.qa-card{display:block;width:100%;min-height:132px;padding:14px 15px;border:1px solid transparent;border-radius:13px;background:rgba(243,239,230,.68);color:var(--ink);font-family:inherit;text-align:left;cursor:pointer;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s}
+.qa-card:hover{transform:translateY(-1px);border-color:rgba(46,74,56,.22);background:#fff}
+.qa-card.is-active{border-color:rgba(46,74,56,.42);border-left:4px solid var(--green);background:#fff;box-shadow:0 8px 18px rgba(46,74,56,.08)}
+.qa-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.qa-card time{color:var(--mut);font-size:10.5px}
+.qa-kind{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:#e8eee8;color:var(--green2);font-size:10.5px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
+.qa-kind.is-vocab{background:#e4f2ef;color:#0d756b}.qa-kind.is-ms{background:#f1e9d8;color:#88681e}
+.qa-card strong{display:block;overflow:hidden;margin-bottom:2px;color:var(--green2);font-family:Georgia,"Noto Serif SC",serif;font-size:18px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}
+.qa-card small{display:block;margin-bottom:8px;color:var(--mut);font-size:10.5px}
+.qa-card-preview{display:-webkit-box;overflow:hidden;color:#5f594e;font-size:12px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.qa-card-count{display:flex;align-items:center;justify-content:space-between;margin-top:11px;color:var(--mut);font-size:10.5px}.qa-card-count i{color:var(--green2);font-style:normal;font-weight:700}
+.qa-detailpane{min-height:520px;padding:28px clamp(22px,3vw,38px) 38px}
+.qa-detail-empty{display:flex;min-height:450px;align-items:center;justify-content:center;flex-direction:column;color:var(--mut);text-align:center}.qa-detail-empty span{font-family:Georgia,serif;font-size:34px}.qa-detail-empty p{max-width:280px;font-size:13px;line-height:1.8}
+.qa-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.qa-detail-head>div{min-width:0}.qa-detail-date{margin-left:8px;color:var(--mut);font-size:11px}
+.qa-detail-head h2{overflow-wrap:anywhere;margin:13px 0 6px;color:var(--green2);font-family:Georgia,"Noto Serif SC",serif;font-size:clamp(25px,3vw,34px);line-height:1.25}
+.qa-detail-head p{max-width:680px;margin:0;color:var(--mut);font-size:12px;line-height:1.7}
+.qa-detail-head .qa-orphan{color:var(--rust)}
+.qa-primary,.qa-ghost{min-height:44px;padding:0 16px;border-radius:10px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.qa-primary{flex:none;border:1px solid var(--green);background:var(--green);color:#f6f1e7}.qa-primary:hover{background:var(--green2)}.qa-primary:disabled{border-color:var(--line);background:var(--paper);color:var(--mut);cursor:not-allowed}
+.qa-ghost{border:1px solid var(--line);background:#fff;color:var(--green2)}
+.qa-timeline{position:relative;padding:22px 0 0 28px}
+.qa-timeline::before{content:"";position:absolute;left:7px;top:30px;bottom:22px;width:1px;background:var(--line)}
+.qa-turn{position:relative;margin:0 0 18px;padding:19px 20px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.qa-turn::before{content:"";position:absolute;left:-25px;top:25px;width:9px;height:9px;border:4px solid var(--card);border-radius:50%;background:var(--green);box-shadow:0 0 0 1px rgba(46,74,56,.22)}
+.qa-turn-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;color:var(--mut);font-size:10.5px}.qa-turn-meta span:first-child{color:var(--green2);font-weight:750}.qa-turn-meta span:last-child{margin-left:auto}
+.qa-turn>h4{display:flex;align-items:flex-start;gap:10px;margin:0 0 15px;color:var(--green2);font-size:17px;line-height:1.65}
+.qa-turn>h4>span,.qa-a-mark{display:inline-flex;width:25px;height:25px;flex:none;align-items:center;justify-content:center;border-radius:7px;background:var(--green);color:#f6f1e7;font-family:Georgia,serif;font-size:13px;line-height:1}
+.qa-turn-answer{display:grid;grid-template-columns:25px minmax(0,1fr);gap:10px;padding-top:14px;border-top:1px dashed var(--line);font-size:14.5px;line-height:1.9;overflow-wrap:anywhere}
+.qa-a-mark{background:#efe6cf;color:#82641d}
+.qa-turn-answer h4{margin:14px 0 5px;color:var(--green2);font-size:16px}.qa-turn-answer h4:first-child{margin-top:0}
+.qa-turn-answer ul{margin:7px 0;padding:9px 12px 9px 28px;border-radius:9px;background:rgba(46,74,56,.045)}.qa-turn-answer li{margin:3px 0}.qa-turn-answer code{white-space:normal}
+.qa-mobile-back{display:none;min-height:44px;margin-bottom:14px;border:0;background:transparent;color:var(--green2);font-family:inherit;font-weight:700;cursor:pointer}
+.qa-empty{display:flex;min-height:330px;align-items:center;justify-content:center;flex-direction:column;padding:30px 18px;color:var(--mut);text-align:center}.qa-empty-mark{display:flex;width:46px;height:46px;align-items:center;justify-content:center;margin-bottom:14px;border:1px solid var(--line);border-radius:50%;color:var(--green2);font-family:Georgia,serif;font-size:22px}.qa-empty b{color:var(--green2);font-size:15px}.qa-empty p{max-width:265px;margin:8px 0 18px;font-size:12px;line-height:1.75}
+.qa-empty-loading>span{width:24px;height:24px;margin-bottom:14px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:qaSpin .8s linear infinite}@keyframes qaSpin{to{transform:rotate(360deg)}}
+.qa-archive button:focus-visible,.qa-archive input:focus-visible,.qa-archive select:focus-visible,.qa-detail-head h2:focus-visible{outline:3px solid rgba(46,74,56,.28);outline-offset:2px}
+@media(max-width:1040px){.qa-hero{grid-template-columns:1fr;padding:32px}.qa-summary{grid-template-columns:repeat(3,1fr)}.qa-summary>div:last-child{grid-column:auto;min-height:82px}.qa-toolbar{flex-wrap:wrap}.qa-search{flex-basis:100%}.qa-types{flex:1}.qa-workspace{grid-template-columns:minmax(245px,300px) minmax(0,1fr)}}
+@media(max-width:720px){
+ .qa-archive{margin-bottom:92px}.qa-hero{gap:24px;margin:0 -3px 14px;padding:27px 24px;border-radius:17px}.qa-eyebrow{margin-bottom:12px;font-size:9.5px}.qa-hero h2{font-size:31px}.qa-hero-copy>p{font-size:12px}.qa-summary{grid-template-columns:repeat(2,1fr)}.qa-summary>div{min-height:70px;padding:11px 13px}.qa-summary>div:last-child{grid-column:1/-1;min-height:56px}.qa-summary b{font-size:22px}
+ .qa-toolbar{padding:10px}.qa-search{min-width:0}.qa-types{order:3;width:100%;overflow-x:auto}.qa-type{min-height:40px;flex:1;padding:0 9px}.qa-period{flex:1}.qa-sync{text-align:left}
+ .qa-workspace{display:block}.qa-listpane,.qa-detailpane{border-radius:15px}.qa-listpane{padding:13px 10px}.qa-detailpane{display:none;min-height:0;padding:18px 16px 28px}.qa-archive.is-mobile-detail .qa-listpane{display:none}.qa-archive.is-mobile-detail .qa-detailpane{display:block}.qa-mobile-back{display:block}.qa-detail-head{display:block}.qa-detail-head .qa-primary{width:100%;margin-top:16px}.qa-detail-head h2{font-size:27px}.qa-timeline{padding-left:20px}.qa-timeline::before{left:3px}.qa-turn{padding:16px 15px}.qa-turn::before{left:-21px}.qa-turn-meta span:last-child{width:100%;margin-left:0}.qa-turn>h4{font-size:16px}.qa-turn-answer{font-size:14px;line-height:1.85}.qa-card{min-height:126px}
+}
+@media(max-width:360px){.qa-hero{padding:24px 19px}.qa-hero h2{font-size:28px}.qa-type{font-size:11px}.qa-period{width:calc(100% - 54px)}.qa-detailpane{padding-inline:13px}.qa-turn{padding:14px 12px}.qa-turn-answer{grid-template-columns:22px minmax(0,1fr);gap:8px}}
 .ai-wait{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:var(--mut);font-size:13px;padding:4px 0}
 .ai-wait.on{color:var(--green2)}
 .ai-wait b{font-weight:700}
