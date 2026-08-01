@@ -512,7 +512,8 @@ MS.forEach(function(m){POOL.push({key:'ms|'+m[0],q:m[0],a:m[1],type:'名解',cat
 var SB_URL='https://jrnlyzdwwcrplfgjvgxo.supabase.co';
 var SB_KEY='sb_publishable_f9IH5seJLq1ORy5tbyNCwA_NRd3AMEQ';
 var SB_ID='ganlin770';
-var sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SB_URL,SB_KEY):null;
+/* 本站是单用户静态学习站，不使用 Supabase Auth。禁用会话继承，避免浏览器中的旧登录态把公开写入从 anon 切成 authenticated，导致 RLS 拒绝追问保存。 */
+var sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}):null;
 
 var SKEY='mti_app_v2';
 var st=JSON.parse(localStorage.getItem(SKEY)||localStorage.getItem('mti_app_v1')||'{}');
@@ -3222,6 +3223,7 @@ window.tdPsgEligible=tdPsgEligible;window.tdPsgMeta=tdPsgMeta;window.tdWriteTask
 window.tdQualification=tdQualification;window.tdGtBuild=tdGtBuild;window.tdGen=tdGen;
 window.tdScoreOf=tdScoreOf;window.td211TaskFor=td211TaskFor;window.tdPoliticsPlan=tdPoliticsPlan;window.tdPoliticsLessons=tdPoliticsLessons;window.tdPoliticsCurrentLesson=tdPoliticsCurrentLesson;window.tdPoliticsLessonFor=tdPoliticsLessonFor;window.tdPoliticsLessonHtml=tdPoliticsLessonHtml;window.tdPoliticsReady=tdPoliticsReady;
 window.tdVocabUsable=tdVocabUsable;window.tdTermNorm=tdTermNorm;window.tdNcuMsMeta=tdNcuMsMeta;window.tdNcuDrillYear=tdNcuDrillYear;window.tdDrawDrill=tdDrawDrill;window.tdTransMinUnits=tdTransMinUnits;window.tdNextAction=tdNextAction;window.tdWeekPlanHtml=tdWeekPlanHtml;window.tdRetestReady=tdRetestReady;window.tdDraftSave=tdDraftSave;window.tdSetSession=function(x){tdSession=x;};window.tdRoadmapHtml=tdRoadmapHtml;window.tdSelectSchoolPsg=tdSelectSchoolPsg;window.tdOnJudged=tdOnJudged;window.tdListenAudioToggle=tdListenAudioToggle;window.tdListenAudioStop=tdListenAudioStop;window.tdListenAudioView=tdListenAudioView;window.TD_DONE_KEYS=TD_DONE_KEYS;window.TD_NCU_MS=TD_NCU_MS;window.TD_POLITICS_TREE=TD_POLITICS_TREE;
+if(location.search.indexOf('__qa_save=')>=0)window.__qaSavePut=aiExpQaPut;
 setNav();
 })();
 </script>
