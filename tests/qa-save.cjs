@@ -71,7 +71,7 @@ window.supabase = {
         'ci|qa-save-regression',
         '追问保存路径正常吗？',
         '正常，本机和云端都应保留。',
-        { model: 'kimi-k3', effort: 'high' },
+        { model: 'gpt-5.6-luna', effort: 'max' },
         '已有主讲解',
         (ok) => { window.__qaCloudCallback = ok; }
       );
@@ -91,11 +91,37 @@ window.supabase = {
     });
     assert.equal(savedState.local.qa.length, 1);
     assert.equal(savedState.local.qa[0].q, '追问保存路径正常吗？');
+    assert.equal(savedState.local.qa[0].m, 'gpt-5.6-luna');
+    assert.equal(savedState.local.qa[0].e, 'max');
     assert.equal(savedState.batches.length, 1);
     assert.equal(savedState.batches[0].table, 'progress');
     assert.equal(savedState.batches[0].rows.length, 2);
     assert.ok(savedState.batches[0].rows.some((row) => row.payload.kind === 'followup'));
     assert.ok(savedState.batches[0].rows.some((row) => row.payload.kind === 'main'));
+    const followup = savedState.batches[0].rows.find((row) => row.payload.kind === 'followup');
+    assert.equal(followup.payload.qa.m, 'gpt-5.6-luna');
+    assert.equal(followup.payload.qa.e, 'max');
+
+    const otherSaves = await page.evaluate(() => {
+      const route = { model: 'deepseek-v4-flash', effort: 'max', label: 'DeepSeek V4 Flash · Max' };
+      const mainOk = window.__qaMainSavePut('ci|main-save-regression', '主讲解保存模型测试', route);
+      const judge = window.__qaJudgeSavePut(
+        { key: 'v|judge-save-regression', kind: 'vocab', q: 'regression', sig: 'sig-v1' },
+        '作答',
+        '【判定】✓ 得分\n\n批改保存模型测试',
+        true,
+        route,
+        'cache-max'
+      );
+      const explanations = JSON.parse(localStorage.getItem('mti_ai_explain') || '{}');
+      const judgments = JSON.parse(localStorage.getItem('mti_ai_judge_v1') || '{}');
+      return { mainOk, main: explanations['ci|main-save-regression'], judge, judgment: judgments['v|judge-save-regression'] };
+    });
+    assert.equal(otherSaves.mainOk, true);
+    assert.equal(otherSaves.main.m, 'deepseek-v4-flash');
+    assert.equal(otherSaves.main.e, 'max');
+    assert.equal(otherSaves.judgment.m, 'deepseek-v4-flash');
+    assert.equal(otherSaves.judgment.e, 'max');
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     const restored = await page.evaluate(() => JSON.parse(localStorage.getItem('mti_ai_explain') || '{}')['ci|qa-save-regression']);
