@@ -1314,13 +1314,20 @@ function aiExpCloudRequeue(batch,message){
  if(aiExpCloudT)clearTimeout(aiExpCloudT);
  aiExpCloudT=setTimeout(aiExpCloudFlush,Math.min(60000,1200*Math.pow(2,aiExpCloudRetry-1)));
 }
+function aiExpCloudMarkSynced(item){
+ var payload=item&&item.row&&item.row.payload,k=payload&&payload.card_key,r=k&&aiExpGet(k);if(!r||r.c===1)return;
+ r=Object.assign({},r,{c:1});aiExpLocalPut(k,r);
+ var panels=typeof aiCardPanels==='function'?aiCardPanels(k):[];
+ panels.forEach(function(panel){if(!aiCardJobActive(aiCardJobs[k])){var body=panel.querySelector('.ai-panel-body');if(body)aiExpShow(body,k,r);}});
+ if(typeof aiCardSyncButtons==='function')aiCardSyncButtons(k);
+}
 function aiExpCloudFlush(){
  aiExpCloudT=null;var ids=Object.keys(aiExpCloudQueue);if(!ids.length||!sb)return;
  var batch=ids.map(function(id){var x=aiExpCloudQueue[id];delete aiExpCloudQueue[id];return x;});
  try{
   sb.from('progress').upsert(batch.map(function(x){return x.row;})).then(function(res){
    if(res&&res.error){console.warn('exp cloud push:',res.error.message);aiExpCloudRequeue(batch,res.error.message);return;}
-   aiExpCloudRetry=0;batch.forEach(function(item){item.callbacks.forEach(function(cb){try{cb(true);}catch(e){}});});
+   aiExpCloudRetry=0;batch.forEach(function(item){aiExpCloudMarkSynced(item);item.callbacks.forEach(function(cb){try{cb(true);}catch(e){}});});
   }).catch(function(e){aiExpCloudRequeue(batch,e&&e.message);});
  }catch(e){aiExpCloudRequeue(batch,e&&e.message);}
 }
@@ -1338,27 +1345,36 @@ function aiExpCloudMergeCard(k,mainRows,qaRows){
   if(!r.x&&p.main_x){r.x=String(p.main_x);r.t=qa.t||Date.now();r.m=qa.m||r.m;r.e=qa.e||r.e;changed=true;}
   var before=Array.isArray(r.qa)?r.qa.length:0;aiExpMergeQa(r,qa);if((r.qa||[]).length!==before)changed=true;
  });
+ if(((mainRows&&mainRows.length)||(qaRows&&qaRows.length))&&r.c!==1){r.c=1;changed=true;}
  if(changed){aiExpLocalPut(k,r);var panels=typeof aiCardPanels==='function'?aiCardPanels(k):[];
   panels.forEach(function(panel){if(!aiCardJobActive(aiCardJobs[k])){var body=panel.querySelector('.ai-panel-body');if(body)aiExpShow(body,k,r);}});
   if(typeof aiCardSyncButtons==='function')aiCardSyncButtons(k);}
 }
-function aiExpCloudFetchCard(k){
- if(!sb||!k||aiExpCloudFetches[k])return;
- aiExpCloudFetches[k]=true;var qaPrefix=AIEXP_QA_PREFIX+aiExpCloudKey(k)+'_';
+function aiExpCloudFetchFinish(k,ok){
+ var callbacks=aiExpCloudFetches[k]||[];delete aiExpCloudFetches[k];var restored=aiExpGet(k);
+ callbacks.forEach(function(cb){try{cb(restored,ok);}catch(e){}});
+}
+function aiExpCloudFetchCard(k,done){
+ if(!sb||!k){if(typeof done==='function')setTimeout(function(){done(aiExpGet(k),false);},0);return false;}
+ if(aiExpCloudFetches[k]){if(typeof done==='function')aiExpCloudFetches[k].push(done);return true;}
+ aiExpCloudFetches[k]=typeof done==='function'?[done]:[];var qaPrefix=AIEXP_QA_PREFIX+aiExpCloudKey(k)+'_';
  try{
   Promise.all([
    sb.from('progress').select('payload').eq('id',aiExpCloudCardId(k)).maybeSingle(),
    sb.from('progress').select('payload').like('id',qaPrefix+'%').order('updated_at',{ascending:true})
-  ]).then(function(rows){delete aiExpCloudFetches[k];
+  ]).then(function(rows){
+   var problem=rows[0]&&rows[0].error||rows[1]&&rows[1].error;
+   if(problem){console.warn('exp cloud pull:',problem.message||problem);aiExpCloudFetchFinish(k,false);return;}
    var main=rows[0]&&rows[0].data?[rows[0].data]:[],qa=rows[1]&&rows[1].data?rows[1].data:[];
-   aiExpCloudMergeCard(k,main,qa);
-  }).catch(function(){delete aiExpCloudFetches[k];});
- }catch(e){delete aiExpCloudFetches[k];}
+   aiExpCloudMergeCard(k,main,qa);aiExpCloudFetchFinish(k,true);
+  }).catch(function(){aiExpCloudFetchFinish(k,false);});
+ }catch(e){aiExpCloudFetchFinish(k,false);}
+ return true;
 }
 function aiExpPut(k,text,route){
  if(!k||!text)return false;
  var old=aiExpGet(k)||{},now=Date.now(),r={x:String(text),t:now,u:now,
-  m:route&&route.model?route.model:aiSelectedModel(),e:route&&route.effort?route.effort:'max',qa:Array.isArray(old.qa)?old.qa:[]};
+  m:route&&route.model?route.model:aiSelectedModel(),e:route&&route.effort?route.effort:'max',c:0,qa:Array.isArray(old.qa)?old.qa:[]};
  var localOk=aiExpLocalPut(k,r),cloudOk=aiExpCloudMainQueue(k,r);return localOk||cloudOk;
 }
 function aiExpQaPut(k,q,text,route,mainText,onCloud){
@@ -1366,7 +1382,7 @@ function aiExpQaPut(k,q,text,route,mainText,onCloud){
  var old=aiExpGet(k)||{},now=Date.now(),main=String(old.x||mainText||'');
  var qa={id:String(now)+'-'+Math.random().toString(36).slice(2,8),q:String(q),a:String(text),t:now,
   m:route&&route.model?route.model:aiSelectedModel(),e:route&&route.effort?route.effort:'max'};
- var r={x:main,t:old.t||now,u:now,m:old.m||(route&&route.model)||aiSelectedModel(),e:old.e||(route&&route.effort)||'max',
+ var r={x:main,t:old.t||now,u:now,m:old.m||(route&&route.model)||aiSelectedModel(),e:old.e||(route&&route.effort)||'max',c:0,
   qa:Array.isArray(old.qa)?old.qa.slice():[]};
  aiExpMergeQa(r,qa);var localOk=aiExpLocalPut(k,r);
  if(main)aiExpCloudMainQueue(k,r);
@@ -1380,7 +1396,7 @@ function aiExpCloudPull(){
   sb.from('progress').select('payload').eq('id',SB_ID+'_exp').maybeSingle().then(function(res){
    var cloud=res&&res.data&&res.data.payload;if(!cloud)return;
    Object.keys(cloud).forEach(function(k){var cv=cloud[k],lv=aiExpGet(k);
-    if(cv&&cv.x&&(!lv||(cv.u||cv.t||0)>(lv.u||lv.t||0)))aiExpLocalPut(k,cv);});
+    if(cv&&cv.x&&(!lv||(cv.u||cv.t||0)>(lv.u||lv.t||0)))aiExpLocalPut(k,Object.assign({},cv,{c:1}));});
   });
  }catch(e){}
 }
@@ -1526,18 +1542,32 @@ function aiCardJobStart(x,route){
  var j={id:++aiCardJobSeq,key:k,card:x,prompt:aiCardPrompt(x),route:route||aiRoute('explain'),state:'running',phase:0,text:'',error:'',startedAt:Date.now(),finishedAt:0,controller:null,tick:null,retryTimer:null,cancelled:false,scrollTop:0};
  aiCardJobs[k]=j;aiCardJobAttempt(j,0);return j;
 }
-function aiCardPanelAttach(panel,x){
+function aiCardPanelAttach(panel,x,onReady){
  if(!panel||!x)return;
  var k=aiCardId(x);panel.setAttribute('data-ai-card-key',k);
- aiExpCloudFetchCard(k);
  var sub=panel.querySelector('.ai-panel-sub');if(sub)sub.textContent='· '+x.q;
  var j=aiCardJobs[k],body=panel.querySelector('.ai-panel-body');
- if(j){aiCardJobPaint(j);if(body&&typeof j.scrollTop==='number')body.scrollTop=j.scrollTop;return;}
+ if(j){aiCardJobPaint(j);if(body&&typeof j.scrollTop==='number')body.scrollTop=j.scrollTop;if(typeof onReady==='function')onReady(aiExpGet(k),true);return {local:aiExpGet(k),pending:false};}
  var saved=aiExpGet(k);
  if(saved)aiExpShow(body,k,saved);
- else if(body){body.innerHTML='';body.classList.remove('show');var stop=panel.querySelector('.ai-card-stop');if(stop)stop.classList.remove('show');}
+ var pending=aiExpCloudFetchCard(k,function(restored,cloudOk){
+  if(panel.getAttribute('data-ai-card-key')!==String(k)||aiCardJobActive(aiCardJobs[k]))return;
+  var currentBody=panel.querySelector('.ai-panel-body');
+  if(restored)aiExpShow(currentBody,k,restored);
+  else if(currentBody&&currentBody.querySelector('.ai-exp-restore')){
+   if(cloudOk){currentBody.innerHTML='';currentBody.classList.remove('show');}
+   else aiPaint(currentBody,'<div class="ai-exp-restore is-error"><b>云端暂时未连上</b><small>已保存的讲解没有被删除；网络恢复后重新打开这张卡即可取回。</small></div>');
+  }
+  aiCardSyncButtons(k);if(typeof onReady==='function')onReady(restored,cloudOk);
+ });
+ if(!saved&&body){
+  if(pending)aiPaint(body,'<div class="ai-exp-restore"><span></span><b>正在从云端恢复这张卡的讲解…</b><small>已保存的内容不会因换设备或清理本机缓存而丢失</small></div>');
+  else{body.innerHTML='';body.classList.remove('show');}
+  var stop=panel.querySelector('.ai-card-stop');if(stop)stop.classList.remove('show');
+ }
  aiCardAskState(panel,false);
  aiCardSyncButtons(k);
+ return {local:saved,pending:pending};
 }
 function aiCardPanelDetach(panel){
  if(!panel)return;
@@ -1551,11 +1581,15 @@ function aiCardPanelDetach(panel){
 }
 function aiCardOpen(panel,x){
  if(!panel||!x)return;
- panel.classList.add('show');aiCardPanelAttach(panel,x);
- var k=aiCardId(x),j=aiCardJobs[k];
- if(aiCardJobActive(j)||aiExpGet(k))return;
- if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
- aiCardJobStart(x,aiRoute('explain',false));
+ panel.classList.add('show');var k=aiCardId(x),started=false;
+ function startIfMissing(restored){
+  if(started||panel.getAttribute('data-ai-card-key')!==String(k)||restored||aiExpGet(k)||aiCardJobActive(aiCardJobs[k]))return;
+  started=true;if(!aiOk()){alert('先到「AI 助教」页填入网关 Key');return;}
+  aiCardJobStart(x,aiRoute('explain',false));
+ }
+ var state=aiCardPanelAttach(panel,x,startIfMissing),j=aiCardJobs[k];
+ if(aiCardJobActive(j)||state&&state.local)return;
+ if(!state||!state.pending)startIfMissing(null);
 }
 document.addEventListener('click',function(ev){
  var tg=ev.target;if(!tg||!tg.closest)return;
@@ -1684,7 +1718,8 @@ function aiExpQaHtml(c){
 }
 function aiExpShow(body,key,c,notice){
  var model=aiExpModelName(c.m),effort=c.e&&AI_EFFORT_META[c.e]?(model+' '+AI_EFFORT_META[c.e].label):'旧版档位未知';
- var bar='<div class="ai-exp-bar">📌 已保存的讲解 · '+aiExpDate(c.t)+' · '+esc(effort)+' · 本次未耗额度<button type="button" class="ai-pick ai-exp-regen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">按当前模型重新生成并覆盖</button></div>';
+ var saveState=c.c===1?'☁️ 已永久保存到云端':'📌 已保存到本机 · 云端同步中';
+ var bar='<div class="ai-exp-bar">'+saveState+' · '+aiExpDate(c.t)+' · '+esc(effort)+' · 本次未耗额度<button type="button" class="ai-pick ai-exp-regen" data-k="'+esc(String(key)).replace(/"/g,'&quot;')+'">按当前模型重新生成并覆盖</button></div>';
  aiPaint(body,(notice||'')+aiMd(c.x)+bar+aiExpQaHtml(c));
 }
 
@@ -2366,6 +2401,7 @@ function aiQuizMount(){
   var firstCard=queue[qi];
   if(firstCard){var firstKey=aiCardId(firstCard);btn.setAttribute('data-ai-explain-key',firstKey);var firstSpan=btn.querySelector('span');if(firstSpan)firstSpan.textContent=aiCardJobLabel(firstKey,true);}
   var body=panel.querySelector('#aiQuizBody');
+  if(firstCard)aiCardPanelAttach(panel,firstCard);
   panel.querySelector('#aiQuizX').addEventListener('click',function(ev){ev.stopPropagation();aiQuizHide();});
   ovl.addEventListener('click',function(ev){
    if(window.matchMedia&&window.matchMedia('(min-width:900px)').matches)return;
@@ -2569,6 +2605,7 @@ renderQuiz=function(){
  if(_qb){_qb.disabled=qi>=queue.length;
   if(_qk)_qb.setAttribute('data-ai-explain-key',_qk);else _qb.removeAttribute('data-ai-explain-key');
   var _qs=_qb.querySelector('span');if(_qs)_qs.textContent=_qx?aiCardJobLabel(_qk,true):'本轮讲解已完成';}
+ if(_qp&&_qx)aiCardPanelAttach(_qp,_qx);
  if(qi<queue.length){var _mx=queue[qi];qMsDecorate(_mx);qTermDecorate(_mx);
   var _bt=document.querySelector('#quizbox .qbtns');
   if(_bt&&!document.querySelector('#quizbox .qret-row')){
@@ -3303,6 +3340,10 @@ setNav();
 .qclose:active{transform:rotate(90deg) scale(.92)}
 .ai-exp-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--mut)}
 .ai-exp-bar .ai-pick{margin-left:auto;flex:none}
+.ai-exp-restore{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;color:var(--green2)}
+.ai-exp-restore>span{width:25px;height:25px;border:2px solid rgba(46,74,56,.17);border-top-color:var(--green);border-radius:50%;animation:qaSpin .8s linear infinite}
+.ai-exp-restore>b{font-size:14px;letter-spacing:.02em}
+.ai-exp-restore>small{max-width:410px;color:var(--mut);font-size:11.5px;line-height:1.65}
 .ai-card-jobbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 auto 12px;padding:9px 12px;max-width:640px;border:1px solid var(--line);border-left:3px solid var(--green);border-radius:10px;background:rgba(46,74,56,.055);color:var(--green2);font-size:12.5px;line-height:1.55}
 .ai-card-jobbar span{margin-left:auto;color:var(--mut);font-size:11.5px}
 .ai-card-jobbar.is-error,.ai-card-jobbar.is-stopped{border-left-color:var(--rust);background:rgba(191,81,48,.055);color:var(--rust)}
