@@ -426,6 +426,52 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .td-pol-item.done>summary i{color:var(--green)}
 .td-pol-item ul{margin:6px 0 2px 24px;padding-left:14px;color:var(--mut);font-size:10.5px;line-height:1.6}
 .td-pol-item p{margin:5px 0 2px 24px;color:var(--rust);font-size:10px;line-height:1.55}
+.polhub{display:flex;flex-direction:column;gap:14px}
+.polhub-hero{border:1px solid rgba(46,74,56,.2);border-left:5px solid var(--green);border-radius:14px;background:linear-gradient(145deg,rgba(46,74,56,.1),rgba(255,255,255,.76));padding:17px 18px}
+.polhub-hero h2{margin:0;color:var(--green2);font-family:"Noto Serif SC",serif;font-size:21px;line-height:1.35}
+.polhub-hero p{margin:6px 0 0;color:var(--mut);font-size:12px;line-height:1.7}
+.polhub-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.polhub-meta span{padding:5px 9px;border:1px solid rgba(46,74,56,.17);border-radius:999px;background:rgba(255,255,255,.68);color:var(--green2);font-size:10.5px;font-weight:700}
+.polhub-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(260px,.92fr);gap:14px;align-items:start}
+.polhub-panel{border:1px solid var(--line);border-radius:13px;background:var(--card);padding:14px;min-width:0}
+.polhub-panel h3{margin:0;color:var(--green2);font-size:15px}
+.polhub-panel>p{margin:5px 0 11px;color:var(--mut);font-size:11px;line-height:1.65}
+.polhub-path{padding:10px 11px;border:1px dashed rgba(46,74,56,.25);border-radius:9px;background:rgba(46,74,56,.035);color:var(--ink);font-size:11px;line-height:1.65;overflow-wrap:anywhere}
+.polhub-path b{color:var(--green2)}
+.polhub-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.polhub-actions button,.polquiz-option,.polhub-save,.polhub-reset{border:1px solid rgba(46,74,56,.25);border-radius:8px;background:#fff;color:var(--green2);font:600 12px inherit;cursor:pointer;padding:9px 11px;transition:.15s}
+.polhub-actions button:hover,.polquiz-option:hover,.polhub-save:hover{border-color:var(--green);background:rgba(46,74,56,.07)}
+.polhub-actions .polhub-primary,.polhub-save{background:var(--green);border-color:var(--green);color:#fff}
+.polhub-actions .polhub-primary:hover,.polhub-save:hover{background:var(--green2)}
+.polhub-map{display:flex;flex-direction:column;gap:7px}
+.polhub-map details{border:1px solid var(--line);border-radius:9px;background:#fff;overflow:hidden}
+.polhub-map summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;cursor:pointer;color:var(--green2);font-size:11.5px;font-weight:800}
+.polhub-map summary::-webkit-details-marker{display:none}
+.polhub-map summary small{color:var(--mut);font-size:10px;font-weight:500}
+.polhub-map ol{margin:0;padding:0 11px 9px 29px;color:var(--mut);font-size:10.5px;line-height:1.62}
+.polhub-map li{padding:4px 0;border-top:1px solid rgba(46,74,56,.08)}
+.polhub-map li.today{color:var(--green2);font-weight:800}
+.polhub-map li.done{color:var(--green)}
+.polquiz{display:flex;flex-direction:column;gap:10px}
+.polquiz-card{border:1px solid var(--line);border-radius:10px;padding:11px;background:rgba(46,74,56,.025)}
+.polquiz-card>b{display:block;color:var(--ink);font-size:12px;line-height:1.6}
+.polquiz-options{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.polquiz-option{text-align:left;min-height:42px;font-weight:500;font-size:11px;line-height:1.45}
+.polquiz-option:disabled{cursor:default;opacity:1}
+.polquiz-option.is-correct{background:#e4f3ea;border-color:#4f9870;color:#165635}
+.polquiz-option.is-wrong{background:#fff0eb;border-color:#c66c48;color:#8c3920}
+.polquiz-note{margin:8px 0 0;padding:8px 9px;border-left:3px solid var(--green);background:#fff;color:var(--mut);font-size:10.5px;line-height:1.65}
+.polquiz-summary{padding:9px 10px;border-radius:9px;background:var(--paper);color:var(--green2);font-size:11px;line-height:1.6}
+.polhub-record{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.polhub-record label{display:flex;flex-direction:column;gap:5px;color:var(--ink);font-size:11px;font-weight:700}
+.polhub-record .wide{grid-column:1/-1}
+.polhub-record input,.polhub-record textarea{box-sizing:border-box;width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:400 12px inherit;padding:8px 9px;outline:none}
+.polhub-record input:focus,.polhub-record textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(46,74,56,.1)}
+.polhub-check{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:7px!important;font-weight:500!important;line-height:1.55}
+.polhub-check input{width:auto!important;margin:2px 0 0;accent-color:var(--green)}
+.polhub-status{margin-top:9px;color:var(--mut);font-size:10.5px;line-height:1.55}
+.polhub-status.ok{color:#17643e}
+.polhub-notice{padding:10px 11px;border-radius:9px;background:#fff7e5;color:#815a16;font-size:10.5px;line-height:1.65}
 .td-proof{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
 .td-proof label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--mut)}
 .td-proof input,.td-proof textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:12px;color:var(--ink)}
@@ -438,6 +484,7 @@ h1{font-family:"Noto Serif SC",serif;font-size:32px;font-weight:700;letter-spaci
 .td-revision textarea:focus{outline:none;border-color:var(--green)}
 @media(max-width:900px){.td-head{grid-template-columns:auto 1fr}.td-next{grid-column:1/-1;border-left:0;border-top:1px solid var(--line);padding:12px 0 0}}
 @media(max-width:760px){.td-task{flex-wrap:wrap}.td-go{margin-left:38px}.td-stage-head{align-items:flex-start}.td-stage-progress i{display:none}.td-week-grid{grid-template-columns:1fr;min-width:0}.td-week summary small{display:none}}
+@media(max-width:760px){.polhub-grid{grid-template-columns:1fr}.polquiz-options,.polhub-record{grid-template-columns:1fr}.polhub-hero{padding:15px}.polhub-hero h2{font-size:19px}}
 @media(max-width:760px){.td-listen-card{padding:14px;gap:11px}.td-listen-head{flex-direction:column;gap:10px}.td-listen-head-actions{width:100%;justify-content:space-between}.td-listen-controls{grid-template-columns:1fr;gap:10px;padding:12px}.td-listen-actions{display:grid;grid-template-columns:minmax(0,1fr) auto}.td-listen-toggle{width:100%}.td-listen-source{padding:11px 12px}.td-listen-retell-head{align-items:flex-start;flex-direction:column;gap:2px}}
 @media(max-width:760px){.td-qgates{grid-template-columns:1fr}.td-qhead{flex-direction:column}.td-qresult{align-self:flex-start}}
 @media(max-width:760px){.td-sumbox .ai-send{min-height:44px}}
@@ -2374,11 +2421,6 @@ var AI_SPARK='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke
 function aiQuizHide(){
  var p=document.getElementById('aiQuizPanel');
  if(!p)return;
- if(window.matchMedia&&window.matchMedia('(min-width:900px)').matches){
-  aiCardPanelDetach(p);
-  return;
- }
- if(!p.classList.contains('show'))return;
  p.classList.remove('show');
  aiCardPanelDetach(p);
 }
@@ -2399,9 +2441,7 @@ function aiQuizMount(){
   /* 定位交给 CSS：小屏=底部弹出 / 桌面=左栏常驻（split-layout v1）*/
   ovl.appendChild(panel);ovl.appendChild(launch);
   var firstCard=queue[qi];
-  if(firstCard){var firstKey=aiCardId(firstCard);btn.setAttribute('data-ai-explain-key',firstKey);var firstSpan=btn.querySelector('span');if(firstSpan)firstSpan.textContent=aiCardJobLabel(firstKey,true);}
-  var body=panel.querySelector('#aiQuizBody');
-  if(firstCard)aiCardPanelAttach(panel,firstCard);
+  if(firstCard){var firstKey=aiCardId(firstCard);btn.setAttribute('data-ai-explain-key',firstKey);var firstSpan=btn.querySelector('span');if(firstSpan)firstSpan.textContent=aiCardJobLabel(firstKey,true);aiExpCloudFetchCard(firstKey);}
   panel.querySelector('#aiQuizX').addEventListener('click',function(ev){ev.stopPropagation();aiQuizHide();});
   ovl.addEventListener('click',function(ev){
    if(window.matchMedia&&window.matchMedia('(min-width:900px)').matches)return;
@@ -2598,14 +2638,15 @@ renderQuiz=function(){
  var r=_qzRenderQuiz.apply(this,arguments);
  var _qb=document.getElementById('aiQuizBtn'),_qx=queue[qi],_qk=_qx?aiCardId(_qx):'';
  var _qp=document.getElementById('aiQuizPanel');
- if(_qp&&_qp.getAttribute('data-ai-card-key')&&_qp.getAttribute('data-ai-card-key')!==_qk){
+ var _qprevk=_qb?_qb.getAttribute('data-ai-explain-key')||'':'';
+ if(_qp&&_qprevk!==_qk){
+  _qp.classList.remove('show');
   aiCardPanelDetach(_qp);
-  if(window.matchMedia&&window.matchMedia('(max-width:899.98px)').matches)_qp.classList.remove('show');
  }
  if(_qb){_qb.disabled=qi>=queue.length;
   if(_qk)_qb.setAttribute('data-ai-explain-key',_qk);else _qb.removeAttribute('data-ai-explain-key');
   var _qs=_qb.querySelector('span');if(_qs)_qs.textContent=_qx?aiCardJobLabel(_qk,true):'本轮讲解已完成';}
- if(_qp&&_qx)aiCardPanelAttach(_qp,_qx);
+ if(_qk&&_qprevk!==_qk)aiExpCloudFetchCard(_qk);
  if(qi<queue.length){var _mx=queue[qi];qMsDecorate(_mx);qTermDecorate(_mx);
   var _bt=document.querySelector('#quizbox .qbtns');
   if(_bt&&!document.querySelector('#quizbox .qret-row')){
@@ -3292,10 +3333,114 @@ render=function(){
  _tdRender();
 };
 
+/* 101 政治线上课程与练题系统：课程留在用户私有夸克，本站只保存学习结构与学习证据。 */
+function tdPolPracticeState(){
+ st.politicsPractice=st.politicsPractice&&typeof st.politicsPractice==='object'?st.politicsPractice:{answers:{}};
+ st.politicsPractice.answers=st.politicsPractice.answers&&typeof st.politicsPractice.answers==='object'?st.politicsPractice.answers:{};
+ return st.politicsPractice;
+}
+function tdPolHash(s){var h=2166136261,i;for(i=0;i<String(s).length;i++){h^=String(s).charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function tdPolPracticeItems(L){
+ if(!L)return[];
+ var distractors=[];
+ tdPoliticsLessons().forEach(function(x){if(x.id!==L.id&&x.subjectId===L.subjectId){x.points.forEach(function(p){distractors.push(p);});}});
+ if(distractors.length<3){tdPoliticsLessons().forEach(function(x){if(x.id!==L.id){x.points.forEach(function(p){distractors.push(p);});}});}
+ return L.points.slice(0,4).map(function(point,index){
+  var options=[point],used={};var seed=tdPolHash(L.id+'|'+index),step=0;
+  while(options.length<4&&distractors.length&&step<distractors.length){var candidate=distractors[(seed+step*7)%distractors.length];step++;if(candidate&&!used[candidate]&&candidate!==point){used[candidate]=1;options.push(candidate);}}
+  while(options.length<4)options.push('不是本节核心知识点（请回到课程笔记辨别）');
+  var rotate=tdPolHash(L.id+'|choice|'+index)%options.length;
+  options=options.slice(rotate).concat(options.slice(0,rotate));
+  return{id:L.id+'-self-'+(index+1),prompt:'下列哪一项属于「'+L.title+'」这一节需要主动掌握的核心知识？',options:options,answer:options.indexOf(point),note:'本题为原创章节定位自测。答对后仍要合上资料，能解释并串联：'+point+'。'};
+ });
+}
+function tdPolPracticeSummary(L){
+ var S=tdPolPracticeState(),items=tdPolPracticeItems(L),answered=0,correct=0;
+ items.forEach(function(q){var a=S.answers[q.id];if(a){answered++;if(a.correct)correct++;}});
+ return{total:items.length,answered:answered,correct:correct,wrong:answered-correct};
+}
+function tdPolPracticeAnswer(q,choice){
+ var S=tdPolPracticeState();if(S.answers[q.id])return;
+ S.answers[q.id]={choice:+choice,correct:+choice===q.answer?1:0,at:Date.now()};
+ save();
+}
+function tdPolPracticeReset(L){var S=tdPolPracticeState();tdPolPracticeItems(L).forEach(function(q){delete S.answers[q.id];});save();}
+function tdPolQuarkCoursePath(L){
+ var folders={marx:'01.考点串讲-马原',morals:'02.考点串讲-思修',history:'03.考点串讲-史纲',mao:'04.考点串讲-毛中特','new-era':'05.考点串讲-新思想'};
+ return '考研政治 / 00_只学这个_MTI政治主线 / 01_先学_徐涛强化主课 / '+(folders[L&&L.subjectId]||'对应学科目录');
+}
+function tdPolExplanationHint(L){
+ if(!L)return'';
+ if(L.subjectId==='marx'||L.subjectId==='history')return '对应错题可在「02_每天做_肖1000题_只看错题讲解」的'+(L.subjectId==='marx'?'01.马原理':'02.史纲')+'目录回看。';
+ return '当前可见错题视频集中在马原、史纲；本节错题以「27版肖1000答案解析册」和你的错因本订正。';
+}
+function tdPolMapHtml(L){
+ var completed=tdPoliticsState().completed;
+ return TD_POLITICS_TREE.map(function(subject){
+  var rows=subject.lessons.map(function(row){var lesson=tdPoliticsLessonById(row[0]),cls=(lesson.id===L.id?' today':'')+(completed[lesson.id]?' done':'');return '<li class="'+cls+'">'+(completed[lesson.id]?'✓ ':'')+esc(lesson.title)+(lesson.id===L.id?' · 今日':'')+'</li>';}).join('');
+  return '<details'+(subject.id===L.subjectId?' open':'')+'><summary><span>'+esc(subject.name)+'</span><small>'+subject.lessons.length+' 节</small></summary><ol>'+rows+'</ol></details>';
+ }).join('');
+}
+function tdPolQuizHtml(L){
+ var S=tdPolPracticeState(),items=tdPolPracticeItems(L),summary=tdPolPracticeSummary(L);
+ var cards=items.map(function(q,qi){var answer=S.answers[q.id],options=q.options.map(function(option,oi){var cls='';if(answer){if(oi===q.answer)cls=' is-correct';else if(oi===answer.choice)cls=' is-wrong';}return '<button type="button" class="polquiz-option'+cls+'" data-pol-q="'+esc(q.id)+'" data-pol-choice="'+oi+'"'+(answer?' disabled':'')+'>'+String.fromCharCode(65+oi)+'. '+esc(option)+'</button>';}).join('');return '<div class="polquiz-card"><b>'+(qi+1)+'. '+esc(q.prompt)+'</b><div class="polquiz-options">'+options+'</div>'+(answer?'<p class="polquiz-note">'+esc(q.note)+(answer.correct?'':' 本题已进入本机错题记录，重练前先口头说清错误项为什么不属于本节。')+'</p>':'')+'</div>';}).join('');
+ return '<div class="polquiz" data-testid="politics-original-quiz"><div class="polhub-notice">原创章节定位自测（非肖1000、非政治真题）：它只检查你是否把课程知识点放对位置，不能替代题册训练。</div>'+cards+'<div class="polquiz-summary" data-testid="politics-quiz-summary">已答 '+summary.answered+'/'+summary.total+' · 正确 '+summary.correct+' · 错题 '+summary.wrong+'。'+(summary.wrong?'先订正再重练。':'')+'</div><button type="button" class="polhub-reset" id="polHubReset">重练本节原创自测</button></div>';
+}
+function tdPolHubEvidenceHtml(D,L){
+ var P=D.politics||{},plan=D.politicsPlan||tdPoliticsPlan(),ready=tdPoliticsReady(D),ratio=P.answered&&P.correct!==''?Math.round((+P.correct/Math.max(1,+P.answered))*100):null;
+ return '<section class="polhub-panel" data-testid="politics-evidence"><h3>肖1000 / 真题练习账本</h3><p>在你的实体书或私有网盘中作答；本站只保存范围、得分和订正证据，不储存题面。</p><div class="polhub-record">'
+  +'<label>资料名称<input id="polHubResource" value="'+esc(P.resource||'徐涛强化主课 + 27版肖1000题')+'" placeholder="例：27版肖1000题 / 某年真题"></label>'
+  +'<label>章节 / 题号范围<input id="polHubScope" value="'+esc(P.scope||L.questions)+'" placeholder="例：马原第2章 1—25题"></label>'
+  +'<label>完成题数（至少 '+plan.target+'）<input id="polHubAnswered" type="number" min="0" max="100" value="'+esc(P.answered||'')+'" placeholder="'+plan.target+'"></label>'
+  +'<label>首轮正确数（至少 '+Math.round(plan.passRate*100)+'%）<input id="polHubCorrect" type="number" min="0" max="100" value="'+esc(P.correct==null||P.correct===''?'':P.correct)+'" placeholder="例如 '+Math.ceil(plan.target*plan.passRate)+'"></label>'
+  +'<label class="wide polhub-check"><input id="polHubConcept" type="checkbox"'+(P.conceptChecked?' checked':'')+'><span>我已合上资料，逐条复述本节知识点与易错区分。</span></label>'
+  +'<label class="wide">错因复盘（至少30字）<textarea id="polHubWrong" rows="3" placeholder="写知识盲点、审题误区、干扰项为何错；不要只抄答案。">'+esc(P.wrongNote||'')+'</textarea></label>'
+  +'<label class="wide">闭卷知识框架（至少30字）<textarea id="polHubFramework" rows="3" placeholder="合上资料写出本节结构、关键词和相互关系。">'+esc(P.framework||'')+'</textarea></label>'
+  +'</div><div class="polhub-actions"><button type="button" class="polhub-save" id="polHubSave">保存并同步今日 101 证据</button></div><p class="polhub-status'+(ready?' ok':'')+'" id="polHubStatus">'+(ready?'本节已满足今日 101 政治的合格证据，并会进入下一节。':('当前未达标：至少 '+plan.target+' 题、首轮正确率 '+Math.round(plan.passRate*100)+'%、错因和闭卷框架各 30 字。'+(ratio!=null?' 当前正确率 '+ratio+'%。':'')))+'</p></section>';
+}
+function politicsHubView(){
+ tdEnsure();var D=st.daily,L=tdPoliticsLessonFor(D),progress=tdPoliticsProgress(),summary=tdPolPracticeSummary(L);
+ return '<div class="polhub" data-testid="politics-hub"><section class="polhub-hero"><h2>101 政治线上课程与练题系统</h2><p>只沿着你已整理的夸克主线学：徐涛五科强化课 → 肖1000对应范围 → 错因订正 → 闭卷框架。不要在多位老师的重复课程之间跳转。</p><div class="polhub-meta"><span>5 科 · '+progress.total+' 节</span><span>已完成 '+progress.done+'/'+progress.total+'</span><span>今日 '+esc(L.subjectShort)+' · '+esc(L.title)+'</span><span>原创自测错题 '+summary.wrong+'</span></div></section>'
+  +'<div class="polhub-grid"><section class="polhub-panel"><h3>今日先学什么</h3><p>看完本节课程后，马上做对应肖1000范围；课程与讲义只在你的私有夸克网盘打开。</p><div class="polhub-path"><b>夸克相对路径</b><br>'+esc(tdPolQuarkCoursePath(L))+'<br><b>对应练习</b><br>'+esc(L.questions)+'<br><b>订正提示</b><br>'+esc(tdPolExplanationHint(L))+'</div><div class="polhub-actions"><button type="button" class="polhub-primary" id="polHubOpenQuark">在夸克打开课程</button><button type="button" id="polHubToday">查看今日学习清单</button></div><h3 style="margin-top:16px">完整课程地图</h3><p>完成证据达标后，次日自动接续到下一节。</p><div class="polhub-map" data-testid="politics-course-map">'+tdPolMapHtml(L)+'</div></section>'
+  +'<section class="polhub-panel"><h3>看课后的即时检验</h3><p>先做原创定位自测，再回你的肖1000或真题资料完成当日题量。</p>'+tdPolQuizHtml(L)+'</section></div>'
+  +tdPolHubEvidenceHtml(D,L)+'</div>';
+}
+function tdPolHubSaveEvidence(){
+ tdEnsure();var D=st.daily,P=D.politics||(D.politics={}),L=tdPoliticsLessonFor(D),g=function(id){return document.getElementById(id);};
+ P.lessonId=L.id;P.conceptChecked=g('polHubConcept')&&g('polHubConcept').checked?1:0;P.resource=g('polHubResource')?g('polHubResource').value.trim():'';P.scope=g('polHubScope')?g('polHubScope').value.trim():'';P.answered=g('polHubAnswered')?Math.max(0,+g('polHubAnswered').value||0):0;P.correct=g('polHubCorrect')&&g('polHubCorrect').value!==''?Math.max(0,+g('polHubCorrect').value||0):'';P.wrongNote=g('polHubWrong')?g('polHubWrong').value.trim():'';P.framework=g('polHubFramework')?g('polHubFramework').value.trim():'';
+ D.done.politics=tdPoliticsReady(D)?1:0;var completed=tdPoliticsState().completed,day=D.date||tdBJDate();if(D.done.politics)completed[P.lessonId]=day;else if(completed[P.lessonId]===day)delete completed[P.lessonId];save();
+}
+function bindPoliticsHub(){
+ var root=document.getElementById('view');if(!root)return;
+ root.addEventListener('click',function(e){
+  var option=e.target.closest('[data-pol-q]');if(option){tdEnsure();var L=tdPoliticsLessonFor(st.daily),items=tdPolPracticeItems(L),id=option.getAttribute('data-pol-q'),q=null;items.forEach(function(x){if(x.id===id)q=x;});if(q){tdPolPracticeAnswer(q,+option.getAttribute('data-pol-choice'));render();}return;}
+  if(e.target.closest('#polHubReset')){tdEnsure();tdPolPracticeReset(tdPoliticsLessonFor(st.daily));render();return;}
+  if(e.target.closest('#polHubOpenQuark')){window.open('https://pan.quark.cn/list','_blank','noopener');return;}
+  if(e.target.closest('#polHubToday')){go('today');return;}
+  if(e.target.closest('#polHubSave')){tdPolHubSaveEvidence();render();}
+ });
+}
+/* 在已有导航、今日学习封装之后注册，避免改动原页面的路由和学习数据。 */
+IC.politics='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5h10a4 4 0 0 1 4 4V20H9a4 4 0 0 0-4 2z"/><path d="M5 4.5V22M9 9h6M9 13h5"/></svg>';
+NAVG[0][1].splice(1,0,'politics');
+NAV.splice(1,0,['politics','101 政治系统']);
+MLB.politics='政治';
+var _polHubRender=render;
+render=function(){
+ if(cur==='politics'){
+  document.querySelector('h1').textContent='101 政治系统';
+  document.getElementById('view').innerHTML=politicsHubView();
+  bindPoliticsHub();
+  return;
+ }
+ _polHubRender();
+};
+
 /* 稳定的今日学习验收接口：供本地回归测试使用，不触发网络请求。 */
 window.tdPsgEligible=tdPsgEligible;window.tdPsgMeta=tdPsgMeta;window.tdWriteTaskFor=tdWriteTaskFor;
 window.tdQualification=tdQualification;window.tdGtBuild=tdGtBuild;window.tdGen=tdGen;
 window.tdScoreOf=tdScoreOf;window.td211TaskFor=td211TaskFor;window.tdPoliticsPlan=tdPoliticsPlan;window.tdPoliticsLessons=tdPoliticsLessons;window.tdPoliticsCurrentLesson=tdPoliticsCurrentLesson;window.tdPoliticsLessonFor=tdPoliticsLessonFor;window.tdPoliticsLessonHtml=tdPoliticsLessonHtml;window.tdPoliticsReady=tdPoliticsReady;
+window.tdPolPracticeItems=tdPolPracticeItems;window.tdPolPracticeSummary=tdPolPracticeSummary;window.tdPolQuarkCoursePath=tdPolQuarkCoursePath;window.tdPolHubSaveEvidence=tdPolHubSaveEvidence;
 window.tdVocabUsable=tdVocabUsable;window.tdTermNorm=tdTermNorm;window.tdNcuMsMeta=tdNcuMsMeta;window.tdNcuDrillYear=tdNcuDrillYear;window.tdDrawDrill=tdDrawDrill;window.tdTransMinUnits=tdTransMinUnits;window.tdNextAction=tdNextAction;window.tdWeekPlanHtml=tdWeekPlanHtml;window.tdRetestReady=tdRetestReady;window.tdDraftSave=tdDraftSave;window.tdSetSession=function(x){tdSession=x;};window.tdRoadmapHtml=tdRoadmapHtml;window.tdSelectSchoolPsg=tdSelectSchoolPsg;window.tdOnJudged=tdOnJudged;window.tdListenAudioToggle=tdListenAudioToggle;window.tdListenAudioStop=tdListenAudioStop;window.tdListenAudioView=tdListenAudioView;window.TD_DONE_KEYS=TD_DONE_KEYS;window.TD_NCU_MS=TD_NCU_MS;window.TD_POLITICS_TREE=TD_POLITICS_TREE;
 if(location.search.indexOf('__qa_save=')>=0){window.__qaSavePut=aiExpQaPut;window.__qaMainSavePut=aiExpPut;window.__qaJudgeSavePut=aiJudgePut;}
 if(location.search.indexOf('__ai_routing=')>=0){
